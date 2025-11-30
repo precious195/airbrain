@@ -13,19 +13,19 @@ export interface PaymentProvider {
     apiEndpoint: string;
     apiKey?: string;
     merchantId?: string;
-  supported Currencies: string[];
-fees: {
-    fixed: number;
-    percentage: number;
-};
-limits: {
-    min: number;
-    max: number;
-    daily: number;
-};
-webhookUrl ?: string;
-createdAt: string;
-updatedAt: string;
+    supportedCurrencies: string[];
+    fees: {
+        fixed: number;
+        percentage: number;
+    };
+    limits: {
+        min: number;
+        max: number;
+        daily: number;
+    };
+    webhookUrl?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface PaymentTransaction {
