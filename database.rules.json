@@ -1,0 +1,46 @@
+{
+    "rules": {
+        ".read": false,
+        ".write": false,
+        "users": {
+            "$uid": {
+                ".read": "auth != null && (auth.uid === $uid || root.child('users/' + auth.uid + '/role').val() === 'admin')",
+                ".write": "auth != null && auth.uid === $uid"
+            }
+        },
+        "customers": {
+            "$customerId": {
+                ".read": "auth != null",
+                ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'"
+            }
+        },
+        "conversations": {
+            "$conversationId": {
+                ".read": "auth != null",
+                ".write": "auth != null"
+            }
+        },
+        "tickets": {
+            "$ticketId": {
+                ".read": "auth != null",
+                ".write": "auth != null && (root.child('users/' + auth.uid + '/role').val() === 'admin' || root.child('users/' + auth.uid + '/role').val() === 'agent')"
+            }
+        },
+        "knowledgeBase": {
+            ".read": "auth != null",
+            ".write": "auth != null && (root.child('users/' + auth.uid + '/role').val() === 'admin')"
+        },
+        "industries": {
+            ".read": "auth != null",
+            ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'"
+        },
+        "analytics": {
+            ".read": "auth != null && (root.child('users/' + auth.uid + '/role').val() === 'admin' || root.child('users/' + auth.uid + '/role').val() === 'agent')",
+            ".write": "auth != null"
+        },
+        "auditLogs": {
+            ".read": "auth != null && root.child('users/' + auth.uid + '/role').val() === 'admin'",
+            ".write": "auth != null"
+        }
+    }
+}
