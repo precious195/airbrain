@@ -78,3 +78,42 @@ export class GeminiProvider {
 export const geminiProvider = new GeminiProvider();
 export const geminiFlash = geminiProvider['flashModel']; // Backwards compatibility if needed
 export const geminiPro = geminiProvider['proModel']; // Backwards compatibility if needed
+
+// Standalone exports for backward compatibility
+export async function generateResponse(
+    prompt: string | Array<{ role: string; content: string }>,
+    useProModel = false
+): Promise<string> {
+    return geminiProvider.generateResponse(prompt, useProModel);
+}
+
+export async function* generateStreamingResponse(
+    prompt: string,
+    conversationHistory: { role: string; parts: { text: string }[] }[] = []
+): AsyncGenerator<string, void, unknown> {
+    // Note: Streaming not yet implemented in class, using direct model access for now if needed or implementing in class
+    // For now, let's implement it in the class or just recreate the logic here if the class doesn't have it yet.
+    // The previous class implementation didn't have generateStreamingResponse. Let's add it to the class first or just put the logic here.
+    // Actually, I should add it to the class.
+
+    // But for quick fix, let's just use the provider's model.
+    try {
+        const chat = geminiFlash.startChat({
+            history: conversationHistory,
+        });
+
+        const result = await chat.sendMessageStream(prompt);
+
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            yield chunkText;
+        }
+    } catch (error) {
+        console.error('Gemini streaming error:', error);
+        throw new Error('Failed to generate streaming response');
+    }
+}
+
+export async function generateEmbedding(text: string): Promise<number[]> {
+    return geminiProvider.generateEmbedding(text);
+}
