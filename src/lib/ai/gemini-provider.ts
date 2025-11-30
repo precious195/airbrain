@@ -82,8 +82,31 @@ export const geminiPro = geminiProvider['proModel']; // Backwards compatibility 
 // Standalone exports for backward compatibility
 export async function generateResponse(
     prompt: string | Array<{ role: string; content: string }>,
-    useProModel = false
+    useProModel = false,
+    conversationHistory: { role: string; parts: { text: string }[] }[] = []
 ): Promise<string> {
+    if (typeof prompt === 'string' && conversationHistory.length > 0) {
+        // Convert old style history to new style if needed, or just pass it through if we update the class
+        // For now, let's construct the prompt array expected by the class if we want to use the class method
+        // OR just use the class method's internal logic.
+
+        // Actually, the class method generateResponse supports prompt as string OR array.
+        // If it's a string, it doesn't take history.
+        // So we need to adapt here.
+
+        const convertedHistory = conversationHistory.map(msg => ({
+            role: msg.role === 'model' ? 'assistant' : 'user',
+            content: msg.parts[0].text
+        }));
+
+        const fullPrompt = [
+            ...convertedHistory,
+            { role: 'user', content: prompt }
+        ];
+
+        return geminiProvider.generateResponse(fullPrompt, useProModel);
+    }
+
     return geminiProvider.generateResponse(prompt, useProModel);
 }
 
