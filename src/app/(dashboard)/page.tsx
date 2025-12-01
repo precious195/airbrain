@@ -1,4 +1,6 @@
 // src/app/(dashboard)/page.tsx
+'use client';
+
 import { MessageSquare, Users, Zap, TrendingUp } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -66,10 +68,10 @@ export default function DashboardPage() {
                                     <p className="font-medium text-gray-900">{ticket.title}</p>
                                     <span
                                         className={`px-2 py-1 text-xs font-semibold rounded ${ticket.priority === 'High'
-                                                ? 'bg-red-100 text-red-700'
-                                                : ticket.priority === 'Medium'
-                                                    ? 'bg-yellow-100 text-yellow-700'
-                                                    : 'bg-green-100 text-green-700'
+                                            ? 'bg-red-100 text-red-700'
+                                            : ticket.priority === 'Medium'
+                                                ? 'bg-yellow-100 text-yellow-700'
+                                                : 'bg-green-100 text-green-700'
                                             }`}
                                     >
                                         {ticket.priority}
