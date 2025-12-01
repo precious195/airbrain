@@ -389,3 +389,5 @@ interface DecisionNode {
     trueNode?: DecisionNode;
     falseNode?: DecisionNode;
 }
+
+export const reasoningEngine = new ReasoningEngine();
