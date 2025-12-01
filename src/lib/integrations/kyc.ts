@@ -124,7 +124,8 @@ export class KYCClient {
     ): Promise<KYCDocument> {
         try {
             const formData = new FormData();
-            formData.append('file', fileData, fileName);
+            const blob = fileData instanceof Blob ? fileData : new Blob([new Uint8Array(fileData)]);
+            formData.append('file', blob, fileName);
             formData.append('type', documentType);
             formData.append('verification_id', verificationId);
 

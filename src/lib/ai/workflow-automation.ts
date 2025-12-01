@@ -78,7 +78,7 @@ export class WorkflowEngine {
     }): Promise<Workflow[]> {
         const triggeredWorkflows: Workflow[] = [];
 
-        for (const workflow of this.workflows.values()) {
+        for (const workflow of Array.from(this.workflows.values())) {
             if (!workflow.active) continue;
             if (workflow.industry !== 'all' && workflow.industry !== context.industry) continue;
 

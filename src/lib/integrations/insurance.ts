@@ -286,7 +286,8 @@ export class InsuranceClient {
     ): Promise<{ success: boolean; documentId?: string; message: string }> {
         try {
             const formData = new FormData();
-            formData.append('file', fileData, fileName);
+            const blob = fileData instanceof Blob ? fileData : new Blob([new Uint8Array(fileData)]);
+            formData.append('file', blob, fileName);
             formData.append('claim_number', claimNumber);
             formData.append('document_type', documentType);
 

@@ -68,7 +68,7 @@ export class AirtelMoneyClient {
             this.accessToken = data.access_token;
             this.tokenExpiry = Date.now() + (data.expires_in * 1000) - 60000; // 1 min buffer
 
-            return this.accessToken;
+            return this.accessToken!;
         } catch (error) {
             throw new Error(`Airtel Money authentication error: ${error}`);
         }

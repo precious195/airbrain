@@ -95,7 +95,7 @@ export class CoreBankingClient {
             const data = await response.json();
             this.sessionToken = data.session_token || data.access_token;
 
-            return this.sessionToken;
+            return this.sessionToken!;
         } catch (error) {
             throw new Error(`Banking authentication error: ${error}`);
         }

@@ -78,7 +78,7 @@ export async function processLoanApplicationStep(
 
     switch (session.currentStep) {
         case 0: // Welcome
-            session.current Step = 1;
+            session.currentStep = 1;
             response = {
                 message: `Welcome to Quick Loan Application! 🎉\n\nI'll help you apply for a loan in just a few minutes.\n\nLet's start with your personal information.\n\nWhat is your full name?`,
                 inputType: 'text',
