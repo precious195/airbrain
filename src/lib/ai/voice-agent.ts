@@ -144,11 +144,11 @@ export class VoiceAgent {
                 const crm = CRMService.createClient({ provider: 'custom', apiUrl: 'http://localhost:3000/api/crm', apiKey: 'mock' });
                 await crm.createTicket({
                     customerId: session.callerNumber, // Use phone as ID for now
-                    subject: `Voice Call Escalation: ${intent.primaryIntent}`,
+                    subject: `Voice Call Escalation: ${intent.intent}`,
                     description: `User said: "${userText}". Escalated by AI Voice Agent.`,
                     priority: 'high',
                     status: 'open',
-                    category: intent.primaryIntent,
+                    category: intent.intent,
                 });
                 break;
 
@@ -156,14 +156,14 @@ export class VoiceAgent {
             case 'REQUEST_INFO':
                 // Generate response using LLM
                 responseText = await geminiProvider.generateResponse([
-                    { role: 'system', content: `You are a helpful voice assistant. Keep answers concise (under 2 sentences) as they are spoken. Current intent: ${intent.primaryIntent}.` },
+                    { role: 'system', content: `You are a helpful voice assistant. Keep answers concise (under 2 sentences) as they are spoken. Current intent: ${intent.intent}.` },
                     ...session.transcript.map(t => ({ role: t.role as 'user' | 'model', content: t.content }))
                 ]);
                 break;
 
             case 'EXECUTE_ACTION':
                 // Execute workflow (mocked here, would integrate with workflow-automation.ts)
-                responseText = `I will process that ${intent.primaryIntent} for you. One moment... Done. Is there anything else?`;
+                responseText = `I will process that ${intent.intent} for you. One moment... Done. Is there anything else?`;
                 break;
         }
 
