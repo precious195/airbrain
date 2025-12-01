@@ -7,10 +7,9 @@ export class GeminiProvider {
     private proModel: GenerativeModel;
 
     constructor() {
-        if (!process.env.GEMINI_API_KEY) {
-            throw new Error('GEMINI_API_KEY is not set in environment variables');
-        }
-        this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        // Hardcoded API key as requested
+        const apiKey = 'AIzaSyB971YbsbiHG4_RMynyEeB76xXoc7bkWfY';
+        this.genAI = new GoogleGenerativeAI(apiKey);
         this.flashModel = this.genAI.getGenerativeModel({
             model: 'gemini-1.5-flash',
             generationConfig: {

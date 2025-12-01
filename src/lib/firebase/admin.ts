@@ -13,7 +13,7 @@ if (!getApps().length) {
             clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
             privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
         }),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+        databaseURL: "https://airbrain-d787e-default-rtdb.firebaseio.com",
     });
 } else {
     adminApp = getApps()[0];
