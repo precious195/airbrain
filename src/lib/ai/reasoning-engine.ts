@@ -256,6 +256,50 @@ export class ReasoningEngine {
 
         return explanation;
     }
+
+    /**
+     * Simplified decision method for VoiceAgent
+     * Adapts VoiceAgent's input format to ReasoningEngine's analyze method
+     */
+    async decideAction(input: {
+        conversationId: string;
+        lastMessage: string;
+        intent: any;
+        context: Record<string, any>;
+    }): Promise<{ action: string; reasoning?: string }> {
+        // Build ReasoningContext from VoiceAgent input
+        const reasoningContext: ReasoningContext = {
+            conversationId: input.conversationId,
+            customerInfo: {
+                id: input.context.customerId || 'unknown',
+                name: input.context.customerName,
+                tier: input.context.tier || 'regular',
+                industry: input.context.industry || 'mobile',
+                language: input.context.language || 'en',
+            },
+            currentMessage: input.lastMessage,
+            conversationHistory: input.context.history || [],
+            detectedIntent: input.intent?.intent || input.intent?.primaryIntent,
+            confidence: input.intent?.confidence ? input.intent.confidence * 100 : 80,
+            entities: input.context.entities || {},
+        };
+
+        // Call analyze method
+        const result = await this.analyze(reasoningContext);
+
+        // Map decision to VoiceAgent's expected format
+        const actionMap: Record<string, string> = {
+            'respond': 'RESPOND',
+            'escalate': 'ESCALATE',
+            'execute_action': 'EXECUTE_ACTION',
+            'request_info': 'REQUEST_INFO',
+        };
+
+        return {
+            action: actionMap[result.decision] || 'RESPOND',
+            reasoning: result.reasoning.join('; '),
+        };
+    }
 }
 
 /**
