@@ -36,7 +36,7 @@ Respond in JSON format:
 `;
 
 export class IntentDetector {
-    async detectIntent(message: string, industry: IndustryType): Promise<IntentResult> {
+    async detectIntent(message: string, industry: IndustryType = 'mobile'): Promise<IntentResult> {
         try {
             const response = await generateResponse(intentPrompt(message, industry), false);
 
