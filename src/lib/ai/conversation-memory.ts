@@ -156,3 +156,38 @@ export async function createConversation(
 
     return conversationId;
 }
+
+/**
+ * Singleton service for conversation memory (used by VoiceAgent)
+ */
+export class ConversationMemoryService {
+    async addMessage(
+        conversationId: string,
+        content: string,
+        role: 'user' | 'model' | 'system',
+        metadata?: any
+    ): Promise<string> {
+        const sender = role === 'user' ? 'customer' : 'ai';
+
+        const messageRef = push(ref(database, `conversations/${conversationId}/messages`));
+        const messageId = messageRef.key!;
+
+        const message: any = {
+            id: messageId,
+            sender,
+            content,
+            timestamp: Date.now(),
+            ...metadata
+        };
+
+        await set(messageRef, message);
+
+        await update(ref(database, `conversations/${conversationId}`), {
+            lastMessageAt: Date.now(),
+        });
+
+        return messageId;
+    }
+}
+
+export const conversationMemory = new ConversationMemoryService();
