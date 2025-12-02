@@ -35,7 +35,7 @@ class BrowserSessionManager {
     private startCleanup() {
         this.cleanupInterval = setInterval(() => {
             const now = Date.now();
-            for (const [companyId, session] of this.sessions.entries()) {
+            for (const [companyId, session] of Array.from(this.sessions.entries())) {
                 if (now - session.lastActivity > this.SESSION_TIMEOUT) {
                     console.log(`Cleaning up expired session for company: ${companyId}`);
                     this.closeSession(companyId);
