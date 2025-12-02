@@ -10,6 +10,8 @@ import {
     AlertCircle
 } from 'lucide-react';
 
+import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist';
+
 export default function MobileDashboard() {
     const industry = useIndustry();
     const [loading, setLoading] = useState(true);
@@ -56,6 +58,8 @@ export default function MobileDashboard() {
                 <h1 className="text-3xl font-bold text-gray-900">Mobile Telecom Dashboard</h1>
                 <p className="text-gray-600 mt-1">Real-time overview of your mobile service operations</p>
             </div>
+
+            <OnboardingChecklist />
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -116,8 +120,8 @@ export default function MobileDashboard() {
                                         </div>
                                     </div>
                                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${ticket.status === 'resolved'
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-yellow-100 text-yellow-700'
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-yellow-100 text-yellow-700'
                                         }`}>
                                         {ticket.status}
                                     </span>

@@ -13,8 +13,8 @@ export default function HomePage() {
                         <span className="text-2xl font-bold text-gray-900">AI Customer Service</span>
                     </div>
                     <div className="flex gap-4">
-                        <Link href="/dashboard" className="btn-secondary">
-                            Dashboard
+                        <Link href="/login" className="btn-secondary">
+                            Login
                         </Link>
                         <Link href="/demo" className="btn-primary">
                             Try Demo
@@ -32,7 +32,7 @@ export default function HomePage() {
                         Supporting Mobile Operators, Banks, Microfinance, Insurance & TV providers.
                     </p>
                     <div className="flex gap-4 justify-center">
-                        <Link href="/get-started" className="btn-primary text-lg px-8 py-3">
+                        <Link href="/signup" className="btn-primary text-lg px-8 py-3">
                             Get Started
                         </Link>
                         <Link href="/docs" className="btn-secondary text-lg px-8 py-3">
