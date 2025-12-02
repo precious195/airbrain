@@ -332,9 +332,9 @@ Customer's detected intent: ${intent.intent} (confidence: ${Math.round(intent.co
     return response;
 }
 
-async function getDynamicKnowledge(industry: IndustryType) {
+async function getDynamicKnowledge(companyId: string) {
     try {
-        const knowledgeRef = ref(database, `industries/${industry}/knowledge`);
+        const knowledgeRef = ref(database, `companies/${companyId}/knowledge`);
         const snapshot = await get(knowledgeRef);
 
         if (snapshot.exists()) {
