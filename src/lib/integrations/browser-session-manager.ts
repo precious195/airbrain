@@ -87,7 +87,7 @@ class BrowserSessionManager {
     }
 
     async closeAll() {
-        for (const [companyId] of this.sessions) {
+        for (const companyId of Array.from(this.sessions.keys())) {
             await this.closeSession(companyId);
         }
         if (this.cleanupInterval) {
