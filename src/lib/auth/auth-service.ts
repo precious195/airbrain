@@ -43,6 +43,7 @@ export const authService = {
             phone: '', // Optional for admin
             role: 'admin',
             companyId: companyId,
+            status: 'active',
             createdAt: Date.now(),
             displayName: fullName
         };
