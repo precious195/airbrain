@@ -191,3 +191,43 @@ export interface AuditLog {
     ipAddress?: string;
     metadata?: Record<string, any>;
 }
+
+// Knowledge Base Interfaces
+
+export interface FAQ {
+    id: string;
+    question: string;
+    answer: string;
+    category: string;
+    tags: string[];
+    active: boolean;
+    lastUpdated: number;
+}
+
+export interface Product {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    specifications: Record<string, string>;
+    features: string[];
+    active: boolean;
+    lastUpdated: number;
+}
+
+export interface Procedure {
+    id: string;
+    title: string;
+    steps: string[];
+    requirements: string[];
+    category: 'registration' | 'support' | 'other';
+    active: boolean;
+    lastUpdated: number;
+}
+
+export interface IndustryKnowledge {
+    faqs: Record<string, FAQ>;
+    products: Record<string, Product>;
+    procedures: Record<string, Procedure>;
+}

@@ -216,14 +216,26 @@ async function generateIndustryResponse(
     industry: IndustryType,
     messageText: string,
     intent: any,
-    knowledgeBase: any,
+    staticKnowledge: any,
     history: any[]
 ): Promise<string> {
+    // Fetch dynamic knowledge from Firebase
+    const dynamicKnowledge = await getDynamicKnowledge(industry);
+
+    // Merge static and dynamic knowledge
+    // We prioritize dynamic content but keep static as fallback/structure
+    const knowledgeContext = {
+        ...staticKnowledge,
+        faqs: dynamicKnowledge.faqs || [],
+        products: dynamicKnowledge.products || [],
+        procedures: dynamicKnowledge.procedures || []
+    };
+
     const systemPrompt = `You are a helpful customer service AI for a ${industry} company. 
 Use the following knowledge base to answer questions accurately and professionally.
 
 Knowledge Base:
-${JSON.stringify(knowledgeBase, null, 2)}
+${JSON.stringify(knowledgeContext, null, 2)}
 
 Guidelines:
 - Be concise and helpful
@@ -243,6 +255,26 @@ Customer's detected intent: ${intent.intent} (confidence: ${Math.round(intent.co
     );
 
     return response;
+}
+
+async function getDynamicKnowledge(industry: IndustryType) {
+    try {
+        const knowledgeRef = ref(database, `industries/${industry}/knowledge`);
+        const snapshot = await get(knowledgeRef);
+
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            return {
+                faqs: data.faqs ? Object.values(data.faqs) : [],
+                products: data.products ? Object.values(data.products) : [],
+                procedures: data.procedures ? Object.values(data.procedures) : []
+            };
+        }
+        return { faqs: [], products: [], procedures: [] };
+    } catch (error) {
+        console.error('Error fetching dynamic knowledge:', error);
+        return { faqs: [], products: [], procedures: [] };
+    }
 }
 
 async function createEscalationTicket(

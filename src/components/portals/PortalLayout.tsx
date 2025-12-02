@@ -10,7 +10,8 @@ import {
     Database,
     BarChart3,
     Settings,
-    ArrowLeft
+    ArrowLeft,
+    Book
 } from 'lucide-react';
 
 // Industry type and context
@@ -80,6 +81,7 @@ export default function PortalLayout({ children, industry }: PortalLayoutProps) 
         { href: `/portals/${industry}/customers`, label: 'Customers', icon: Users },
         { href: `/portals/${industry}/conversations`, label: 'Conversations', icon: MessageSquare },
         { href: `/portals/${industry}/data`, label: 'Data Management', icon: Database },
+        { href: `/portals/${industry}/knowledge`, label: 'Knowledge Base', icon: Book },
         { href: `/portals/${industry}/analytics`, label: 'Analytics', icon: BarChart3 },
         { href: `/portals/${industry}/settings`, label: 'Settings', icon: Settings },
     ];
@@ -110,8 +112,8 @@ export default function PortalLayout({ children, industry }: PortalLayoutProps) 
                                     key={item.href}
                                     href={item.href}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                            ? `${config.bgColor} text-white`
-                                            : 'text-gray-700 hover:bg-gray-100'
+                                        ? `${config.bgColor} text-white`
+                                        : 'text-gray-700 hover:bg-gray-100'
                                         }`}
                                 >
                                     <Icon className="w-5 h-5" />
