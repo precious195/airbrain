@@ -4,13 +4,17 @@
  * TypeScript interfaces for Firebase Realtime Database schema
  */
 
+export type UserRole = 'admin' | 'agent' | 'viewer';
+
 export interface User {
     id: string;
     email: string;
     phone: string;
-    role: 'admin' | 'agent' | 'customer';
+    role: UserRole;
     industryId?: string; // Legacy/Global admin
     companyId?: string; // Multi-tenant support
+    invitedBy?: string;
+    status: 'active' | 'invited' | 'disabled';
     createdAt: number;
     displayName: string;
     metadata?: Record<string, any>;
