@@ -9,7 +9,8 @@ export interface User {
     email: string;
     phone: string;
     role: 'admin' | 'agent' | 'customer';
-    industryId: string;
+    industryId?: string; // Legacy/Global admin
+    companyId?: string; // Multi-tenant support
     createdAt: number;
     displayName: string;
     metadata?: Record<string, any>;
@@ -230,4 +231,99 @@ export interface IndustryKnowledge {
     faqs: Record<string, FAQ>;
     products: Record<string, Product>;
     procedures: Record<string, Procedure>;
+}
+
+export interface AutomationStep {
+    type: 'navigate' | 'click' | 'type' | 'wait' | 'extract' | 'screenshot';
+    selector?: string;
+    value?: string;
+    timeout?: number;
+    extractAs?: string; // variable name to store extracted data
+}
+
+export interface BrowserAutomationConfig {
+    enabled: boolean;
+    loginUrl: string;
+    selectors: {
+        usernameField: string;
+        passwordField: string;
+        loginButton: string;
+        balanceElement?: string;
+        transactionsTable?: string;
+        [key: string]: string | undefined;
+    };
+    actions: {
+        name: string;
+        description: string;
+        steps: AutomationStep[];
+        enabled: boolean;
+    }[];
+    sessionTimeout?: number; // minutes
+    headless?: boolean;
+}
+
+export interface SystemIntegration {
+    enabled: boolean;
+    integrationType: 'api' | 'browser' | 'hybrid';
+
+    // API Integration fields
+    systemUrl: string;
+    username: string;
+    password: string; // Encrypted in storage
+    authType: 'basic' | 'bearer' | 'apiKey';
+    apiKey?: string;
+    rules: {
+        // Define what operations the AI can perform
+        canViewBalance: boolean;
+        canViewTransactions: boolean;
+        canViewCustomerInfo: boolean;
+        canUpdateRecords: boolean;
+        canProcessPayments: boolean;
+        canCreateTickets: boolean;
+        customOperations?: {
+            name: string;
+            endpoint: string;
+            method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+            description: string;
+            enabled: boolean;
+        }[];
+    };
+    headers?: Record<string, string>;
+    rateLimits?: {
+        requestsPerMinute: number;
+        requestsPerDay: number;
+    };
+    timeout?: number; // milliseconds
+    lastTested?: number;
+    status?: 'active' | 'inactive' | 'error';
+
+    // Browser Automation fields
+    browserAutomation?: BrowserAutomationConfig;
+}
+
+export interface Company {
+    id: string;
+    name: string;
+    industry: IndustryType;
+    whatsappConfig?: WhatsAppIndustryConfig;
+    systemIntegration?: SystemIntegration;
+    createdAt: number;
+    settings?: Record<string, any>;
+}
+
+export interface WhatsAppIndustryConfig {
+    enabled: boolean;
+    phoneNumberId: string;
+    accessToken: string;
+    businessAccountId: string;
+    webhookVerifyToken: string;
+    autoResponse: boolean;
+    escalationThreshold: number;
+    businessHours: {
+        enabled: boolean;
+        timezone: string;
+        schedule: Record<string, { start: string; end: string }>;
+    };
+    welcomeMessage: string;
+    offlineMessage: string;
 }

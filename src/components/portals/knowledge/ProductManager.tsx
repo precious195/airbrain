@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, Save, X, Package } from 'lucide-react';
-import { useIndustry } from '../PortalLayout';
+import { useIndustry, useCompany } from '../PortalLayout';
 
 interface Product {
     id: string;
@@ -15,6 +15,7 @@ interface Product {
 
 export default function ProductManager() {
     const industry = useIndustry();
+    const company = useCompany();
     const [products, setProducts] = useState<Product[]>([
         {
             id: '1',

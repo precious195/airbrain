@@ -11,7 +11,8 @@ import {
     BarChart3,
     Settings,
     ArrowLeft,
-    Book
+    Book,
+    Plug
 } from 'lucide-react';
 
 // Industry type and context
@@ -59,10 +60,26 @@ const industryConfigs: Record<IndustryType, IndustryConfig> = {
 
 const IndustryContext = createContext<IndustryConfig | null>(null);
 
+export interface CompanyContextType {
+    id: string;
+    name: string;
+    industry: IndustryType;
+}
+
+const CompanyContext = createContext<CompanyContextType | null>(null);
+
 export function useIndustry() {
     const context = useContext(IndustryContext);
     if (!context) {
         throw new Error('useIndustry must be used within PortalLayout');
+    }
+    return context;
+}
+
+export function useCompany() {
+    const context = useContext(CompanyContext);
+    if (!context) {
+        throw new Error('useCompany must be used within PortalLayout');
     }
     return context;
 }
@@ -82,6 +99,7 @@ export default function PortalLayout({ children, industry }: PortalLayoutProps) 
         { href: `/portals/${industry}/conversations`, label: 'Conversations', icon: MessageSquare },
         { href: `/portals/${industry}/data`, label: 'Data Management', icon: Database },
         { href: `/portals/${industry}/knowledge`, label: 'Knowledge Base', icon: Book },
+        { href: `/portals/${industry}/integration`, label: 'System Integration', icon: Plug },
         { href: `/portals/${industry}/analytics`, label: 'Analytics', icon: BarChart3 },
         { href: `/portals/${industry}/settings`, label: 'Settings', icon: Settings },
     ];

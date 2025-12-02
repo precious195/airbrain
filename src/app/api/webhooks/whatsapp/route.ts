@@ -1,7 +1,7 @@
 // src/app/api/webhooks/whatsapp/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
-import { processIndustryMessage, getIndustryByPhone, getIndustryWhatsAppConfig } from '@/lib/whatsapp/industry-processor';
+import { processIndustryMessage, getCompanyByPhone, getCompanyWhatsAppConfig } from '@/lib/whatsapp/industry-processor';
 
 /**
  * POST /api/webhooks/whatsapp - Handle incoming WhatsApp messages from Meta Business API
@@ -41,19 +41,21 @@ export async function POST(request: NextRequest) {
         // Get customer name if available
         const customerName = value.contacts?.[0]?.profile?.name;
 
-        // 1. Identify industry from phone number
-        const industry = await getIndustryByPhone(businessPhoneId);
+        // 1. Identify Company and Industry from phone number
+        const companyInfo = await getCompanyByPhone(businessPhoneId);
 
-        if (!industry) {
-            console.error('Industry not found for phone:', businessPhoneId);
-            return NextResponse.json({ error: 'Industry not configured' }, { status: 404 });
+        if (!companyInfo) {
+            console.error('Company not found for phone:', businessPhoneId);
+            return NextResponse.json({ error: 'Company not configured' }, { status: 404 });
         }
 
-        // 2. Get industry WhatsApp configuration
-        const config = await getIndustryWhatsAppConfig(industry);
+        const { companyId, industry } = companyInfo;
+
+        // 2. Get company WhatsApp configuration
+        const config = await getCompanyWhatsAppConfig(companyId);
 
         if (!config || !config.enabled) {
-            console.error('WhatsApp not enabled for industry:', industry);
+            console.error('WhatsApp not enabled for company:', companyId);
             return new NextResponse('OK', { status: 200 });
         }
 
@@ -70,6 +72,7 @@ export async function POST(request: NextRequest) {
         // 4. Process message through industry-specific AI
         const response = await processIndustryMessage({
             industry,
+            companyId,
             customerPhone,
             customerName,
             messageText,

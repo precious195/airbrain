@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, List, GripVertical } from 'lucide-react';
-import { useIndustry } from '../PortalLayout';
+import { useIndustry, useCompany } from '../PortalLayout';
 
 interface Procedure {
     id: string;
@@ -13,6 +13,7 @@ interface Procedure {
 
 export default function ProcedureManager() {
     const industry = useIndustry();
+    const company = useCompany();
     const [procedures, setProcedures] = useState<Procedure[]>([
         {
             id: '1',

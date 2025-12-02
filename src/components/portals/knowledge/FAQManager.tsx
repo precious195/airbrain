@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Search, Edit2, Trash2, ChevronDown, ChevronUp, Save, X } from 'lucide-react';
-import { useIndustry } from '../PortalLayout';
+import { useIndustry, useCompany } from '../PortalLayout';
 
 interface FAQ {
     id: string;
@@ -14,6 +14,7 @@ interface FAQ {
 
 export default function FAQManager() {
     const industry = useIndustry();
+    const company = useCompany();
     const [faqs, setFaqs] = useState<FAQ[]>([
         { id: '1', question: 'How do I check my balance?', answer: 'Dial *123# to check your balance instantly.', category: 'General', active: true },
         { id: '2', question: 'What are your operating hours?', answer: 'We are open Mon-Fri 8AM-5PM.', category: 'Support', active: true },
