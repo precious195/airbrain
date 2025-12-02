@@ -94,7 +94,7 @@ export class AutomationWorker {
      * Execute a single automation step
      */
     private async executeStep(
-        page: Page,
+        page: any,
         step: AutomationStep,
         params?: Record<string, any>,
         results?: Record<string, any>
