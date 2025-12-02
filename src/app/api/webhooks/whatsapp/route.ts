@@ -1,69 +1,96 @@
 // src/app/api/webhooks/whatsapp/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createConversation, ConversationMemory } from '@/lib/ai/conversation-memory';
-import { generateResponse } from '@/lib/ai/gemini-provider';
-import { detectIntent, shouldEscalate } from '@/lib/ai/intent-detector';
+import { whatsappService } from '@/lib/whatsapp/whatsapp-service';
+import { processIndustryMessage, getIndustryByPhone, getIndustryWhatsAppConfig } from '@/lib/whatsapp/industry-processor';
 
 /**
- * POST /api/webhooks/whatsapp - Handle incoming WhatsApp messages from Twilio
+ * POST /api/webhooks/whatsapp - Handle incoming WhatsApp messages from Meta Business API
+ * Supports multiple industries with their own WhatsApp Business accounts
  */
 export async function POST(request: NextRequest) {
     try {
-        const formData = await request.formData();
+        const body = await request.json();
 
-        const from = formData.get('From') as string; // Customer's WhatsApp number
-        const body = formData.get('Body') as string; // Message content
-        const profileName = formData.get('ProfileName') as string; // Customer name
-
-        if (!from || !body) {
-            return NextResponse.json({ error: 'Invalid webhook data' }, { status: 400 });
+        // Validate webhook payload
+        if (!body.entry || !body.entry[0]?.changes) {
+            return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
         }
 
-        // Extract phone number (remove 'whatsapp:' prefix)
-        const phoneNumber = from.replace('whatsapp:', '');
+        const change = body.entry[0].changes[0];
+        const value = change.value;
 
-        // Get or create customer ID based on phone number
-        const customerId = await getOrCreateCustomer(phoneNumber, profileName);
-
-        // Get or create active conversation
-        const conversationId = await getActiveConversation(customerId)
-            || await createConversation(customerId, 'whatsapp', 'mobile'); // Default to mobile for now
-
-        const memory = new ConversationMemory(conversationId, customerId);
-
-        // Add customer message to conversation
-        await memory.addMessage('customer', body);
-
-        // Detect intent
-        const intent = await detectIntent(body, 'mobile');
-
-        // Check if escalation needed
-        if (shouldEscalate(intent, body)) {
-            await memory.escalate();
-
-            const escalationMessage = 'Thank you for your message. A customer service representative will contact you shortly to assist you better.';
-            await sendWhatsAppMessage(from, escalationMessage);
-
-            return new NextResponse('Escalated', { status: 200 });
+        // Skip if not a message event
+        if (!value.messages || value.messages.length === 0) {
+            return new NextResponse('OK', { status: 200 });
         }
 
-        // Get conversation history
-        const history = await memory.getHistory();
+        // Extract message details
+        const message = value.messages[0];
+        const businessPhoneId = value.metadata.phone_number_id;
+        const customerPhone = message.from;
+        const messageId = message.id;
+        const messageType = message.type;
 
-        // Generate AI response
-        const aiResponse = await generateResponse(
-            body,
-            false, // Use Flash model for speed
-            history
+        // Only handle text messages for now
+        if (messageType !== 'text') {
+            return new NextResponse('OK', { status: 200 });
+        }
+
+        const messageText = message.text.body;
+
+        // Get customer name if available
+        const customerName = value.contacts?.[0]?.profile?.name;
+
+        // 1. Identify industry from phone number
+        const industry = await getIndustryByPhone(businessPhoneId);
+
+        if (!industry) {
+            console.error('Industry not found for phone:', businessPhoneId);
+            return NextResponse.json({ error: 'Industry not configured' }, { status: 404 });
+        }
+
+        // 2. Get industry WhatsApp configuration
+        const config = await getIndustryWhatsAppConfig(industry);
+
+        if (!config || !config.enabled) {
+            console.error('WhatsApp not enabled for industry:', industry);
+            return new NextResponse('OK', { status: 200 });
+        }
+
+        // 3. Mark message as read
+        await whatsappService.markAsRead(
+            {
+                phoneNumberId: businessPhoneId,
+                accessToken: config.accessToken,
+                businessAccountId: config.businessAccountId
+            },
+            messageId
         );
 
-        // Save AI response to conversation
-        await memory.addMessage('ai', aiResponse, intent.intent, intent.confidence);
+        // 4. Process message through industry-specific AI
+        const response = await processIndustryMessage({
+            industry,
+            customerPhone,
+            customerName,
+            messageText,
+            messageId,
+            config
+        });
 
-        // Send response via WhatsApp
-        await sendWhatsAppMessage(from, aiResponse);
+        // 5. Send AI response back via WhatsApp
+        if (response.shouldRespond) {
+            await whatsappService.sendMessage(
+                {
+                    phoneNumberId: businessPhoneId,
+                    accessToken: config.accessToken,
+                    businessAccountId: config.businessAccountId
+                },
+                customerPhone,
+                response.text
+            );
+        }
 
-        return new NextResponse('Message processed', { status: 200 });
+        return new NextResponse('OK', { status: 200 });
     } catch (error) {
         console.error('WhatsApp webhook error:', error);
         return NextResponse.json(
@@ -74,64 +101,21 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/webhooks/whatsapp - Webhook verification for Twilio
+ * GET /api/webhooks/whatsapp - Webhook verification for Meta
  */
 export async function GET(request: NextRequest) {
-    return new NextResponse('WhatsApp webhook is active', { status: 200 });
-}
+    const searchParams = request.nextUrl.searchParams;
+    const mode = searchParams.get('hub.mode');
+    const token = searchParams.get('hub.verify_token');
+    const challenge = searchParams.get('hub.challenge');
 
-/**
- * Helper: Get or create customer based on phone number
- */
-async function getOrCreateCustomer(phoneNumber: string, name?: string): Promise<string> {
-    // TODO: Implement customer lookup/creation in Firebase
-    // For now, use phone number as customer ID
-    return `customer_${phoneNumber.replace(/[^0-9]/g, '')}`;
-}
-
-/**
- * Helper: Get active conversation for customer
- */
-async function getActiveConversation(customerId: string): Promise<string | null> {
-    // TODO: Query Firebase for active conversation
-    // For now, return null to create new conversation
-    return null;
-}
-
-/**
- * Helper: Send WhatsApp message via Twilio
- */
-async function sendWhatsAppMessage(to: string, message: string): Promise<void> {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const from = process.env.TWILIO_WHATSAPP_NUMBER;
-
-    if (!accountSid || !authToken || !from) {
-        console.error('Twilio credentials not configured');
-        return;
+    // Verify the webhook
+    if (mode === 'subscribe' && token) {
+        // TODO: Verify token against configured verify tokens
+        // For now, accept all subscription requests
+        console.log('WhatsApp webhook verified');
+        return new NextResponse(challenge, { status: 200 });
     }
 
-    try {
-        const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
-            },
-            body: new URLSearchParams({
-                From: from,
-                To: to,
-                Body: message,
-            }),
-        });
-
-        if (!response.ok) {
-            const error = await response.text();
-            console.error('Twilio API error:', error);
-        }
-    } catch (error) {
-        console.error('Failed to send WhatsApp message:', error);
-    }
+    return new NextResponse('Forbidden', { status: 403 });
 }

@@ -1,3 +1,4 @@
+import WhatsAppSettings from '@/components/portals/WhatsAppSettings';
 'use client';
 
 import { useIndustry } from '@/components/portals/PortalLayout';
@@ -180,3 +181,4 @@ export default function MobileSettings() {
         </div>
     );
 }
+

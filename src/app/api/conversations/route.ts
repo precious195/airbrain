@@ -117,7 +117,7 @@ Guidelines for insurance:
 - Provide quote estimates based on general criteria
 - Clarify premium payment options`,
 
-        tv: `
+        television: `
 Guidelines for TV/subscription:
 - Help with decoder issues and troubleshooting
 - Explain package features and pricing

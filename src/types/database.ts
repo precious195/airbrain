@@ -28,7 +28,7 @@ export interface Customer {
     lastActivity?: number;
 }
 
-export type IndustryType = 'mobile' | 'banking' | 'microfinance' | 'insurance' | 'tv';
+export type IndustryType = 'mobile' | 'banking' | 'microfinance' | 'insurance' | 'television';
 
 export type ChannelType = 'whatsapp' | 'sms' | 'web' | 'voice' | 'email';
 
