@@ -1,4 +1,15 @@
-import { chromium, Browser, Page, BrowserContext } from 'playwright';
+// Conditional import - playwright may not be installed
+let chromium: any, Browser: any, Page: any, BrowserContext: any;
+try {
+    const playwright = require('playwright');
+    chromium = playwright.chromium;
+    Browser = playwright.Browser;
+    Page = playwright.Page;
+    BrowserContext = playwright.BrowserContext;
+} catch (e) {
+    console.warn('Playwright not installed. Browser automation will be disabled.');
+}
+
 import { SystemIntegration, AutomationStep } from '@/types/database';
 import { externalSystemService } from './external-system-service';
 
