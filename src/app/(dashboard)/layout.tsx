@@ -1,4 +1,6 @@
 // src/app/(dashboard)/layout.tsx
+'use client';
+
 import Link from 'next/link';
 import { LayoutDashboard, MessageSquare, Ticket, Settings, BarChart } from 'lucide-react';
 
