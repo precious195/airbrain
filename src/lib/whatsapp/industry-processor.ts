@@ -353,17 +353,19 @@ async function getDynamicKnowledge(industry: IndustryType) {
 }
 
 async function createEscalationTicket(
+    companyId: string,
     industry: IndustryType,
     conversationId: string,
     customerPhone: string,
     issue: string
 ): Promise<string> {
-    const ticketsRef = ref(database, 'tickets');
+    const ticketsRef = ref(database, `companies/${companyId}/tickets`);
     const ticketRef = push(ticketsRef);
     const ticketId = `TKT-${Date.now()}`;
 
     await set(ticketRef, {
         id: ticketId,
+        companyId,
         industry,
         conversationId,
         customerPhone,
