@@ -14,9 +14,9 @@ import { SystemIntegration, AutomationStep } from '@/types/database';
 import { externalSystemService } from './external-system-service';
 
 interface BrowserSession {
-    browser: Browser;
-    context: BrowserContext;
-    page: Page;
+    browser: any;
+    context: any;
+    page: any;
     companyId: string;
     lastActivity: number;
     isLoggedIn: boolean;
