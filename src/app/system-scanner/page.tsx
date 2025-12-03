@@ -248,7 +248,7 @@ export default function SystemScannerPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {scanResult.features.map((feature) => (
+                                    {(scanResult.features || []).map((feature) => (
                                         <tr key={feature.id} className="hover:bg-gray-50 transition">
                                             <td className="px-4 py-3 text-sm font-medium text-gray-900">
                                                 {feature.featureName}
@@ -300,7 +300,7 @@ export default function SystemScannerPage() {
                         </div>
 
                         {/* Errors */}
-                        {scanResult.errors.length > 0 && (
+                        {scanResult.errors && scanResult.errors.length > 0 && (
                             <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
                                 <h3 className="font-semibold text-red-800 mb-2">⚠️ Scan Errors</h3>
                                 <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
