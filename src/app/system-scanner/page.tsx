@@ -68,17 +68,24 @@ export default function SystemScannerPage() {
         }
     };
 
+
     const generateActions = async () => {
         if (!scanResult) return;
 
-        const response = await fetch('/api/scanner/generate-actions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ features: scanResult.features })
-        });
+        try {
+            const response = await fetch('/api/scanner/generate-actions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ features: scanResult.features })
+            });
 
-        const { actions } = await response.json();
-        alert(`Generated ${actions.length} actions!`);
+            const data = await response.json();
+            const actions = data?.actions || [];
+            alert(`Generated ${actions.length} actions!`);
+        } catch (error) {
+            console.error('Action generation failed:', error);
+            alert('Failed to generate actions. Please try again.');
+        }
     };
 
     return (
