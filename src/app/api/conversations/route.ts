@@ -2,49 +2,77 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createConversation, ConversationMemory } from '@/lib/ai/conversation-memory';
 import { generateResponse } from '@/lib/ai/gemini-provider';
-// Detect intent
-const intent = await detectIntent(initialMessage, industry as IndustryType);
+import { detectIntent, shouldEscalate } from '@/lib/ai/intent-detector';
+import type { IndustryType } from '@/types/database';
 
-// Update context with intent
-await memory.updateContext({
-    intent: intent.intent,
-    industry: industry as IndustryType,
-});
+/**
+ * POST /api/conversations - Create a new conversation
+ */
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const { customerId, channel, industry, initialMessage, companyId = 'demo-company' } = body;
 
-// Check if escalation needed
-if (shouldEscalate(intent, initialMessage)) {
-    await memory.escalate();
+        // Validate input
+        if (!customerId || !channel || !industry) {
+            return NextResponse.json(
+                { error: 'Missing required fields' },
+                { status: 400 }
+            );
+        }
 
-    return NextResponse.json({
-        conversationId,
-        requiresEscalation: true,
-        message: 'Your query has been forwarded to a human agent who will assist you shortly.',
-    });
-}
+        // Create conversation
+        const conversationId = await createConversation(customerId, channel, industry, companyId);
+        const memory = new ConversationMemory(conversationId, customerId);
 
-// Generate AI response
-const aiPrompt = buildIndustryPrompt(initialMessage, industry as IndustryType, intent.intent);
-const aiResponse = await generateResponse(aiPrompt);
+        // If there's an initial message, process it
+        if (initialMessage) {
+            // Add customer message
+            await memory.addMessage('customer', initialMessage);
 
-// Save AI response
-await memory.addMessage('ai', aiResponse, intent.intent, intent.confidence);
+            // Detect intent
+            const intent = await detectIntent(initialMessage, industry as IndustryType);
 
-return NextResponse.json({
-    conversationId,
-    response: aiResponse,
-    intent: intent.intent,
-    confidence: intent.confidence,
-});
+            // Update context with intent
+            await memory.updateContext({
+                intent: intent.intent,
+                industry: industry as IndustryType,
+            });
+
+            // Check if escalation needed
+            if (shouldEscalate(intent, initialMessage)) {
+                await memory.escalate();
+
+                return NextResponse.json({
+                    conversationId,
+                    requiresEscalation: true,
+                    message: 'Your query has been forwarded to a human agent who will assist you shortly.',
+                });
+            }
+
+            // Generate AI response
+            const aiPrompt = buildIndustryPrompt(initialMessage, industry as IndustryType, intent.intent);
+            const aiResponse = await generateResponse(aiPrompt);
+
+            // Save AI response
+            await memory.addMessage('ai', aiResponse, intent.intent, intent.confidence);
+
+            return NextResponse.json({
+                conversationId,
+                response: aiResponse,
+                intent: intent.intent,
+                confidence: intent.confidence,
+            });
+        }
+
+        return NextResponse.json({ conversationId });
+    } catch (error) {
+        console.error('Conversation creation error:', error);
+        return NextResponse.json(
+            { error: 'Failed to create conversation' },
+            { status: 500 }
+        );
     }
-
-return NextResponse.json({ conversationId });
-} catch (error) {
-    console.error('Conversation creation error:', error);
-    return NextResponse.json(
-        { error: 'Failed to create conversation' },
-        { status: 500 }
-    );
-}
 }
 
 /**
