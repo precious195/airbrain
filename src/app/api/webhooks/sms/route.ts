@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
         // Get or create customer ID
         const customerId = await getOrCreateCustomer(from);
 
-        // Get or create active conversation
+        // Get or create active conversation (use demo-company for SMS)
         const conversationId = await getActiveConversation(customerId)
-            || await createConversation(customerId, 'sms', 'mobile');
+            || await createConversation(customerId, 'sms', 'mobile', 'demo-company');
 
         const memory = new ConversationMemory(conversationId, customerId);
 

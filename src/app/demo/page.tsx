@@ -15,7 +15,7 @@ export default function DemoPage() {
     const startChat = async () => {
         // Create a demo conversation
         const demoCustomerId = `demo_${Date.now()}`;
-        const id = await createConversation(demoCustomerId, 'web', industry);
+        const id = await createConversation(demoCustomerId, 'web', industry, 'demo-company');
         setConversationId(id);
         setIsMinimized(false);
     };
@@ -52,8 +52,8 @@ export default function DemoPage() {
                                         key={ind.id}
                                         onClick={() => setIndustry(ind.id)}
                                         className={`p-6 rounded-lg border-2 transition-all text-left ${industry === ind.id
-                                                ? 'border-primary-600 bg-primary-50'
-                                                : 'border-gray-200 hover:border-primary-300'
+                                            ? 'border-primary-600 bg-primary-50'
+                                            : 'border-gray-200 hover:border-primary-300'
                                             }`}
                                     >
                                         <div className="text-4xl mb-2">{ind.emoji}</div>
