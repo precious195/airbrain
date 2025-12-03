@@ -114,32 +114,95 @@ export class SystemScanner {
     }
 
     /**
-     * Login to external system
+     * Login to external system with extended timeouts for slow-loading sites
      */
     private async login(config: ScanConfig): Promise<void> {
         if (!this.page) throw new Error('Browser not initialized');
 
-        // Navigate to login page
-        await this.page.goto(config.url, { waitUntil: 'networkidle' });
+        const EXTENDED_TIMEOUT = 60000; // 60 seconds for slow sites
 
-        // Fill username
-        await this.page.fill(config.loginSelectors.usernameField, config.username);
+        try {
+            console.log('📍 Navigating to login page...');
+            // Navigate with extended timeout
+            await this.page.goto(config.url, {
+                waitUntil: 'domcontentloaded', // Changed from networkidle for faster initial load
+                timeout: EXTENDED_TIMEOUT
+            });
 
-        // Fill password
-        await this.page.fill(config.loginSelectors.passwordField, config.password);
-
-        // Click login
-        await this.page.click(config.loginSelectors.loginButton);
-
-        // Wait for navigation
-        await this.page.waitForLoadState('networkidle');
-
-        // Check for OTP if configured
-        if (config.loginSelectors.otpField) {
-            const otpVisible = await this.page.isVisible(config.loginSelectors.otpField);
-            if (otpVisible) {
-                throw new Error('OTP_REQUIRED: Please handle two-factor authentication');
+            console.log('⏳ Waiting for page to fully load...');
+            // Wait for network to be idle (JavaScript to finish loading)
+            try {
+                await this.page.waitForLoadState('networkidle', { timeout: 30000 });
+            } catch (e) {
+                console.log('⚠️ Network idle timeout, continuing anyway...');
             }
+
+            console.log('🔍 Looking for username field...');
+            // Wait for username field to be visible (handles dynamic content)
+            await this.page.waitForSelector(config.loginSelectors.usernameField, {
+                state: 'visible',
+                timeout: EXTENDED_TIMEOUT
+            });
+
+            console.log('✍️  Filling username...');
+            await this.page.fill(config.loginSelectors.usernameField, config.username, {
+                timeout: 30000
+            });
+
+            console.log('🔍 Looking for password field...');
+            // Wait for password field
+            await this.page.waitForSelector(config.loginSelectors.passwordField, {
+                state: 'visible',
+                timeout: EXTENDED_TIMEOUT
+            });
+
+            console.log('🔒 Filling password...');
+            await this.page.fill(config.loginSelectors.passwordField, config.password, {
+                timeout: 30000
+            });
+
+            console.log('🔍 Looking for login button...');
+            // Wait for login button
+            await this.page.waitForSelector(config.loginSelectors.loginButton, {
+                state: 'visible',
+                timeout: EXTENDED_TIMEOUT
+            });
+
+            console.log('🚀 Clicking login button...');
+            await this.page.click(config.loginSelectors.loginButton, {
+                timeout: 30000
+            });
+
+            console.log('⏳ Waiting for login to complete...');
+            // Wait for navigation with extended timeout
+            await this.page.waitForLoadState('networkidle', { timeout: EXTENDED_TIMEOUT });
+
+            // Additional wait for any post-login redirects
+            await this.page.waitForTimeout(5000);
+
+            console.log('✅ Login completed successfully!');
+
+            // Check for OTP if configured
+            if (config.loginSelectors.otpField) {
+                const otpVisible = await this.page.isVisible(config.loginSelectors.otpField);
+                if (otpVisible) {
+                    throw new Error('OTP_REQUIRED: Two-factor authentication detected. Please disable 2FA for the scanning account.');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Login failed:', error);
+
+            // Provide helpful error message
+            if (error instanceof Error) {
+                if (error.message.includes('Timeout')) {
+                    throw new Error(
+                        `Login timeout: Could not find "${error.message.includes('username') ? 'username' : error.message.includes('password') ? 'password' : 'login button'}" field. ` +
+                        `The page may be using different selectors or loading very slowly. ` +
+                        `Try inspecting the page elements and updating the selectors in Advanced Login Selectors.`
+                    );
+                }
+            }
+            throw error;
         }
     }
 
