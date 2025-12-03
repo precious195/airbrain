@@ -1,164 +1,182 @@
 'use client';
 
-import { useIndustry } from '@/components/portals/PortalLayout';
-import { useState } from 'react';
-import { Search, Filter, MessageSquare, Clock, User } from 'lucide-react';
+import { useIndustry, useCompany } from '@/components/portals/PortalLayout';
+import { useState, useEffect } from 'react';
+import { Search, MessageSquare, CheckCircle, Clock } from 'lucide-react';
+import { dataService } from '@/lib/data/data-service';
 
 interface Conversation {
     id: string;
-    customer: string;
-    phone: string;
-    subject: string;
+    customerId: string;
+    customerName?: string;
+    customerPhone: string;
+    channel: 'whatsapp' | 'sms' | 'web' | 'voice' | 'email';
     status: 'active' | 'resolved' | 'escalated';
-    channel: 'whatsapp' | 'sms' | 'voice' | 'web';
-    lastMessage: string;
-    timestamp: string;
-    messages: number;
+    lastMessageAt: number;
+    messageCount?: number;
 }
 
-export default function MobileConversations() {
+export default function ConversationsPage() {
     const industry = useIndustry();
-    const [conversations] = useState<Conversation[]>([
-        { id: 'CONV-001', customer: 'John Banda', phone: '+260 97 123 4567', subject: 'Bundle activation failed', status: 'active', channel: 'whatsapp', lastMessage: 'Still waiting for activation', timestamp: '5 min ago', messages: 8 },
-        { id: 'CONV-002', customer: 'Mary Chanda', phone: '+260 96 234 5678', subject: 'Data balance inquiry', status: 'resolved', channel: 'sms', lastMessage: 'Thank you for help!', timestamp: '1 hour ago', messages: 3 },
-        { id: 'CONV-003', customer: 'Peter Mwale', phone: '+260 95 345 6789', subject: 'Network coverage issue', status: 'escalated', channel: 'voice', lastMessage: 'Need urgent assistance', timestamp: '30 min ago', messages: 12 },
-        { id: 'CONV-004', customer: 'Sarah Kabwe', phone: '+260 97 456 7890', subject: 'Promotion code not working', status: 'active', channel: 'web', lastMessage: 'How do I apply the code?', timestamp: '15 min ago', messages: 5 },
-        { id: 'CONV-005', customer: 'David Phiri', phone: '+260 96 567 8901', subject: 'International roaming query', status: 'resolved', channel: 'whatsapp', lastMessage: 'All good now', timestamp: '3 hours ago', messages: 7 },
-    ]);
-
+    const company = useCompany();
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [filter, setFilter] = useState<'all' | 'active' | 'resolved' | 'escalated'>('all');
 
-    const filteredConversations = conversations.filter(conv => {
-        const matchesSearch = conv.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            conv.subject.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || conv.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    useEffect(() => {
+        loadConversations();
+    }, [company.id]);
 
-    const channelColors = {
-        whatsapp: 'bg-green-100 text-green-700',
-        sms: 'bg-blue-100 text-blue-700',
-        voice: 'bg-purple-100 text-purple-700',
-        web: 'bg-orange-100 text-orange-700',
+    const loadConversations = async () => {
+        try {
+            setLoading(true);
+            const data = await dataService.getAll<Conversation>(company.id, 'conversations');
+            setConversations(data);
+        } catch (error) {
+            console.error('Error loading conversations:', error);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const filteredConversations = conversations
+        .filter(conv => filter === 'all' || conv.status === filter)
+        .filter(conv =>
+            conv.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            conv.customerPhone?.includes(searchTerm)
+        );
+
+    const getTimeAgo = (timestamp: number) => {
+        const minutes = Math.floor((Date.now() - timestamp) / 60000);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return `${Math.floor(hours / 24)}d ago`;
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading conversations...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div>
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">Conversations</h1>
-                <p className="text-gray-600 mt-1">View and manage customer conversations</p>
+                <p className="text-gray-600 mt-1">Monitor and manage customer conversations</p>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                    <div className="text-sm text-gray-600 mb-1">Total Conversations</div>
-                    <div className="text-3xl font-bold text-gray-900">{conversations.length}</div>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                    <div className="text-sm text-gray-600 mb-1">Active</div>
-                    <div className="text-3xl font-bold text-blue-600">
-                        {conversations.filter(c => c.status === 'active').length}
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                    <div className="text-sm text-gray-600 mb-1">Escalated</div>
-                    <div className="text-3xl font-bold text-red-600">
-                        {conversations.filter(c => c.status === 'escalated').length}
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                    <div className="text-sm text-gray-600 mb-1">Resolved</div>
-                    <div className="text-3xl font-bold text-green-600">
-                        {conversations.filter(c => c.status === 'resolved').length}
-                    </div>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex-1 min-w-[200px] relative">
+            {/* Filters and Search */}
+            <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                         <input
                             type="text"
-                            placeholder="Search conversations..."
+                            placeholder="Search by customer name or phone..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Filter className="w-5 h-5 text-gray-400" />
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setFilter('all')}
+                            className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
                         >
-                            <option value="all">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="resolved">Resolved</option>
-                            <option value="escalated">Escalated</option>
-                        </select>
+                            All
+                        </button>
+                        <button
+                            onClick={() => setFilter('active')}
+                            className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'active' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                        >
+                            Active
+                        </button>
+                        <button
+                            onClick={() => setFilter('resolved')}
+                            className={`px-4 py-2 rounded-lg font-medium transition ${filter === 'resolved' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                        >
+                            Resolved
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Conversations List */}
-            <div className="space-y-4">
-                {filteredConversations.map((conversation) => (
-                    <div key={conversation.id} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-start gap-4 flex-1">
-                                <div className={`w-12 h-12 rounded-full ${industry.bgColor} flex items-center justify-center text-white font-bold`}>
-                                    {conversation.customer.split(' ').map(n => n[0]).join('')}
+            {filteredConversations.length > 0 ? (
+                <div className="space-y-4">
+                    {filteredConversations.map((conversation) => (
+                        <div key={conversation.id} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer">
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-4 flex-1">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                                        {conversation.customerName?.charAt(0) || conversation.customerPhone.charAt(0)}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-1">
+                                            <h3 className="font-semibold text-gray-900">
+                                                {conversation.customerName || 'Unknown Customer'}
+                                            </h3>
+                                            <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full uppercase">
+                                                {conversation.channel}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-600">{conversation.customerPhone}</p>
+                                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                                            <span className="flex items-center gap-1">
+                                                <MessageSquare className="w-4 h-4" />
+                                                {conversation.messageCount || 0} messages
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="w-4 h-4" />
+                                                {getTimeAgo(conversation.lastMessageAt)}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="text-lg font-semibold text-gray-900">{conversation.customer}</h3>
-                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${channelColors[conversation.channel]}`}>
-                                            {conversation.channel}
+                                <div className="flex items-center gap-3">
+                                    {conversation.status === 'active' && (
+                                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
+                                            Active
                                         </span>
-                                    </div>
-                                    <div className="text-sm text-gray-500 mb-2">{conversation.phone}</div>
-                                    <div className="text-md font-medium text-gray-900 mb-2">{conversation.subject}</div>
-                                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                                        <div className="flex items-center gap-1">
-                                            <MessageSquare className="w-4 h-4" />
-                                            {conversation.messages} messages
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Clock className="w-4 h-4" />
-                                            {conversation.timestamp}
-                                        </div>
-                                    </div>
+                                    )}
+                                    {conversation.status === 'resolved' && (
+                                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                                            <CheckCircle className="w-3 h-3" />
+                                            Resolved
+                                        </span>
+                                    )}
+                                    {conversation.status === 'escalated' && (
+                                        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                                            Escalated
+                                        </span>
+                                    )}
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${conversation.status === 'active'
-                                        ? 'bg-blue-100 text-blue-700'
-                                        : conversation.status === 'resolved'
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-red-100 text-red-700'
-                                    }`}>
-                                    {conversation.status}
-                                </span>
-                                <button className={`${industry.bgColor} text-white px-4 py-2 rounded-lg hover:opacity-90 transition`}>
-                                    View
-                                </button>
-                            </div>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
-                            <span className="font-medium">Last message:</span> {conversation.lastMessage}
-                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+                    <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <MessageSquare className="w-8 h-8 text-gray-400" />
                     </div>
-                ))}
-            </div>
-
-            {filteredConversations.length === 0 && (
-                <div className="bg-white rounded-xl shadow-sm p-12 text-center text-gray-500">
-                    No conversations found
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        {searchTerm ? 'No conversations found' : 'No conversations yet'}
+                    </h3>
+                    <p className="text-gray-500">
+                        {searchTerm ? 'Try adjusting your search' : 'Customer conversations will appear here'}
+                    </p>
                 </div>
             )}
         </div>
