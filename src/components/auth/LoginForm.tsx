@@ -34,6 +34,14 @@ export default function LoginForm() {
             // We should probably fetch the company to get the industry.
             // For this prototype, let's just redirect to 'mobile' or fetch the company.
 
+            // Set session cookie via API
+            const idToken = await user.getIdToken();
+            await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken }),
+            });
+
             // Let's quickly fetch the company to get the industry
             const { ref, get } = await import('firebase/database');
             const { database } = await import('@/lib/firebase/client');

@@ -68,6 +68,8 @@ export default function SystemIntegrationSettings() {
                         sessionTimeout: 30,
                         headless: true
                     };
+                } else if (!loadedConfig.browserAutomation.actions) {
+                    loadedConfig.browserAutomation.actions = [];
                 }
                 setConfig(loadedConfig);
             }
@@ -82,7 +84,7 @@ export default function SystemIntegrationSettings() {
             const configToSave = {
                 ...config,
                 password: config.password ? externalSystemService.encryptCredentials(config.password) : '',
-                apiKey: config.apiKey ? externalSystemService.encryptCredentials(config.apiKey) : undefined
+                apiKey: config.apiKey ? externalSystemService.encryptCredentials(config.apiKey) : ''
             };
 
             await set(ref(database, `companies/${company.id}/systemIntegration`), configToSave);
@@ -431,7 +433,7 @@ export default function SystemIntegrationSettings() {
                                         </button>
                                     </div>
 
-                                    {config.browserAutomation.actions.map((action, actionIndex) => (
+                                    {config.browserAutomation.actions?.map((action, actionIndex) => (
                                         <div key={actionIndex} className="mb-4 p-4 bg-white border border-gray-200 rounded-lg">
                                             <div className="flex justify-between items-start mb-3">
                                                 <div className="flex-1 grid grid-cols-2 gap-3">
@@ -450,12 +452,23 @@ export default function SystemIntegrationSettings() {
                                                         onChange={e => updateAction(actionIndex, 'description', e.target.value)}
                                                     />
                                                 </div>
-                                                <button
-                                                    onClick={() => removeAutomationAction(actionIndex)}
-                                                    className="ml-2 text-red-600 hover:text-red-700"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex items-center gap-2 ml-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs text-gray-500">{action.enabled ? 'Enabled' : 'Disabled'}</span>
+                                                        <button
+                                                            onClick={() => updateAction(actionIndex, 'enabled', !action.enabled)}
+                                                            className={`w-10 h-5 rounded-full transition-colors relative ${action.enabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                                                        >
+                                                            <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${action.enabled ? 'left-5.5' : 'left-0.5'}`} />
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => removeAutomationAction(actionIndex)}
+                                                        className="text-red-600 hover:text-red-700 p-1"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {/* Steps */}
@@ -518,20 +531,115 @@ export default function SystemIntegrationSettings() {
                     </div>
                 )}
 
-                {/* Test Connection */}
+                {/* Run Scan Button */}
                 <div className="mb-6">
                     <button
-                        onClick={handleTestConnection}
-                        disabled={!config.systemUrl || testing}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 flex items-center gap-2"
+                        onClick={async () => {
+                            setTesting(true);
+                            setTestResult(null);
+                            try {
+                                if (!config.browserAutomation?.loginUrl) {
+                                    throw new Error('Please enter a Login URL');
+                                }
+
+                                const response = await fetch('/api/scanner/scan', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        url: config.browserAutomation.loginUrl,
+                                        username: config.username, // Using main config username
+                                        password: config.password, // Using main config password
+                                        loginSelectors: config.browserAutomation.selectors,
+                                        maxPagesToScan: 10 // Default limit for quick scan
+                                    })
+                                });
+
+                                const result = await response.json();
+
+                                if (!response.ok) {
+                                    throw new Error(result.error || 'Scan failed');
+                                }
+
+                                setTestResult({
+                                    success: true,
+                                    message: `Scan successful! Found ${result.features?.length || 0} features. Added to Automation Actions.`
+                                });
+
+                                // Auto-populate actions from discovered features
+                                if (result.features && result.features.length > 0) {
+                                    const newActions = result.features.map((feature: any) => {
+                                        const steps = [];
+
+                                        // Map feature to steps
+                                        if (feature.type === 'form' && feature.formFields) {
+                                            // For forms, add steps to fill each field
+                                            feature.formFields.forEach((field: any) => {
+                                                steps.push({
+                                                    type: 'type',
+                                                    selector: field.selector,
+                                                    value: '', // User needs to fill this
+                                                    timeout: 5000
+                                                });
+                                            });
+                                            // Add submit step
+                                            steps.push({
+                                                type: 'click',
+                                                selector: feature.selector,
+                                                timeout: 5000
+                                            });
+                                        } else if (feature.actionType === 'navigate') {
+                                            steps.push({
+                                                type: 'navigate',
+                                                selector: feature.selector, // Might not be needed for navigate but good for reference
+                                                value: feature.url,
+                                                timeout: 10000
+                                            });
+                                        } else {
+                                            // Default to click for buttons/links
+                                            steps.push({
+                                                type: 'click',
+                                                selector: feature.selector,
+                                                timeout: 5000
+                                            });
+                                        }
+
+                                        return {
+                                            name: feature.featureName || 'Unnamed Action',
+                                            description: `Auto-generated from ${feature.type}: ${feature.text || ''}`,
+                                            steps: steps,
+                                            enabled: true // Default to enabled
+                                        };
+                                    });
+
+                                    // Append new actions to existing ones
+                                    setConfig(prev => ({
+                                        ...prev,
+                                        browserAutomation: {
+                                            ...prev.browserAutomation!,
+                                            actions: [...(prev.browserAutomation?.actions || []), ...newActions]
+                                        }
+                                    }));
+                                }
+
+                            } catch (error: any) {
+                                setTestResult({ success: false, message: error.message });
+                            } finally {
+                                setTesting(false);
+                            }
+                        }}
+                        disabled={!config.browserAutomation?.loginUrl || testing}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                     >
                         {testing ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Testing...
+                                Running Scan...
                             </>
                         ) : (
-                            'Test Connection'
+                            <>
+                                <CheckCircle className="w-4 h-4" />
+                                Run System Scan
+                            </>
                         )}
                     </button>
 

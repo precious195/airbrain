@@ -101,7 +101,8 @@ export class SystemScanner {
      */
     private async launchBrowser(): Promise<void> {
         this.browser = await chromium.launch({
-            headless: true,
+            headless: false, // Visible for debugging
+            slowMo: 1000, // Slow down operations by 1000ms to see what's happening
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 

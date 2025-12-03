@@ -20,10 +20,12 @@ export function middleware(request: NextRequest) {
     }
 
     // Dashboard routes - check authentication
-    if (pathname.startsWith('/dashboard')) {
-        // TODO: Add Firebase authentication check
-        // For now, allow all requests
-        return NextResponse.next();
+    if (pathname.startsWith('/portals') || pathname.startsWith('/dashboard')) {
+        const session = request.cookies.get('session');
+
+        if (!session) {
+            return NextResponse.redirect(new URL('/login', request.url));
+        }
     }
 
     // API routes - add rate limiting headers
