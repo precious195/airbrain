@@ -20,6 +20,8 @@ const INTENT_PATTERNS: Record<IndustryType, Record<string, string[]>> = {
         'buy_bundle': ['bundle', 'data', 'internet', 'buy', 'purchase'],
         'network_issue': ['network', 'signal', 'connection', 'not working', 'slow'],
         'activate_service': ['activate', 'enable', 'start', 'turn on'],
+        'ticket_status': ['ticket', 'status', 'update', 'progress', 'escalation'],
+        'ticket_follow_up': ['follow up', 'check on', 'still waiting', 'any update'],
         'customer_care': ['speak', 'agent', 'human', 'representative', 'help']
     },
     banking: {
@@ -27,28 +29,36 @@ const INTENT_PATTERNS: Record<IndustryType, Record<string, string[]>> = {
         'transfer_money': ['transfer', 'send', 'pay', 'payment'],
         'loan_inquiry': ['loan', 'borrow', 'credit'],
         'statement': ['statement', 'transactions', 'history'],
-        'card_issue': ['card', 'atm', 'debit', 'credit card', 'blocked']
+        'card_issue': ['card', 'atm', 'debit', 'credit card', 'blocked'],
+        'ticket_status': ['ticket', 'complaint', 'reference', 'case number'],
+        'ticket_follow_up': ['follow up', 'still pending', 'any news']
     },
     insurance: {
         'check_policy': ['policy', 'coverage', 'insured', 'premium'],
         'claim': ['claim', 'accident', 'damage', 'hospital'],
         'renewal': ['renew', 'renewal', 'expire', 'expiry'],
         'add_beneficiary': ['beneficiary', 'add', 'include'],
-        'cancel_policy': ['cancel', 'stop', 'terminate']
+        'cancel_policy': ['cancel', 'stop', 'terminate'],
+        'ticket_status': ['claim status', 'ticket', 'reference number'],
+        'ticket_follow_up': ['follow up', 'update on claim']
     },
     microfinance: {
         'loan_application': ['apply', 'loan', 'borrow'],
         'check_loan_status': ['loan status', 'application', 'approved'],
         'repayment': ['repay', 'pay', 'payment', 'installment'],
         'loan_balance': ['balance', 'owe', 'remaining'],
-        'loan_inquiry': ['loan', 'interest', 'terms', 'conditions']
+        'loan_inquiry': ['loan', 'interest', 'terms', 'conditions'],
+        'ticket_status': ['application status', 'ticket', 'reference'],
+        'ticket_follow_up': ['follow up', 'check application']
     },
     television: {
         'check_subscription': ['subscription', 'package', 'plan'],
         'payment': ['pay', 'payment', 'recharge', 'top up'],
         'technical_issue': ['not working', 'error', 'problem', 'screen'],
         'upgrade_package': ['upgrade', 'change', 'better package'],
-        'channel_inquiry': ['channel', 'station', 'show', 'watch']
+        'channel_inquiry': ['channel', 'station', 'show', 'watch'],
+        'ticket_status': ['ticket', 'complaint', 'technical issue status'],
+        'ticket_follow_up': ['follow up', 'still not fixed', 'any update']
     }
 };
 

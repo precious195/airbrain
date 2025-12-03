@@ -39,9 +39,20 @@ export class EntityExtractor {
             emails: []
         };
 
+        // Extract ticket numbers (MT-827193, BK-123456, etc.)
+        const ticketRegex = /[A-Z]{2}-\d{6,}/g;
+        let match;
+        while ((match = ticketRegex.exec(text)) !== null) {
+            entities.accounts.push({
+                type: 'account',
+                value: match[0],
+                raw: match[0],
+                confidence: 0.95
+            });
+        }
+
         // Extract amounts (K500, $100, 500 ZMW, etc.)
         const amountRegex = /(?:K|ZMW|\$|USD)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:K|ZMW|\$|USD)?/gi;
-        let match;
         while ((match = amountRegex.exec(text)) !== null) {
             entities.amounts.push({
                 type: 'amount',
@@ -73,10 +84,10 @@ export class EntityExtractor {
             });
         }
 
-        // Extract account numbers (8-12 digit sequences)
+        // Extract account numbers (8-12 digit sequences, excluding ticket numbers)
         const accountRegex = /\b\d{8,12}\b/g;
         while ((match = accountRegex.exec(text)) !== null) {
-            // Avoid duplicating phone numbers
+            // Avoid duplicating phone numbers and ticket numbers
             if (!entities.phones.some(p => p.value.includes(match![0]))) {
                 entities.accounts.push({
                     type: 'account',
