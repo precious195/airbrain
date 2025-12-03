@@ -126,6 +126,119 @@ export class ConversationMemory {
 
         return snapshot.val();
     }
+    /**
+     * Generate conversation summary
+     */
+    async generateSummary(): Promise<string> {
+        const conversation = await this.getConversation();
+        if (!conversation || !conversation.messages) {
+            return '';
+        }
+
+        const messages = Object.values(conversation.messages)
+            .sort((a, b) => a.timestamp - b.timestamp);
+
+        if (messages.length === 0) {
+            return '';
+        }
+
+        // Simple summary: last few exchanges
+        const recentMessages = messages.slice(-6);
+        const summary = recentMessages
+            .map(m => `${m.sender}: ${m.content}`)
+            .join('\n');
+
+        return `Summary of last ${recentMessages.length} messages:\n${summary}`;
+    }
+
+    /**
+     * Get history with token management
+     */
+    async getHistoryWithTokenLimit(maxTokens: number = 4000): Promise<{ role: string; parts: { text: string }[] }[]> {
+        const conversationRef = ref(database, `conversations/${this.conversationId}`);
+        const snapshot = await get(conversationRef);
+
+        if (!snapshot.exists()) {
+            return [];
+        }
+
+        const conversation: Conversation = snapshot.val();
+        const messages = conversation.messages || {};
+
+        // Convert to Gemini format
+        const history = Object.values(messages)
+            .sort((a, b) => a.timestamp - b.timestamp)
+            .map((msg: Message) => ({
+                role: msg.sender === 'customer' ? 'user' : 'model',
+                parts: [{ text: msg.content }],
+            }));
+
+        // Estimate tokens (rough: ~4 chars per token)
+        let tokenCount = 0;
+        const limited: typeof history = [];
+
+        // Start from most recent
+        for (let i = history.length - 1; i >= 0; i--) {
+            const estimatedTokens = Math.ceil(history[i].parts[0].text.length / 4);
+
+            if (tokenCount + estimatedTokens > maxTokens) {
+                break;
+            }
+
+            limited.unshift(history[i]);
+            tokenCount += estimatedTokens;
+        }
+
+        // If we had to cut off history, add summary as context
+        if (limited.length < history.length && limited.length > 0) {
+            const summary = await this.generateSummary();
+            limited.unshift({
+                role: 'model',
+                parts: [{ text: `[Context from earlier in conversation]: ${summary}` }]
+            });
+        }
+
+        return limited;
+    }
+
+    /**
+     * Add enriched message with NLP data
+     */
+    async addEnrichedMessage(
+        sender: 'customer' | 'ai' | 'agent',
+        content: string,
+        nlpData?: {
+            intent?: string;
+            confidence?: number;
+            entities?: any;
+            sentiment?: string;
+        }
+    ): Promise<string> {
+        const messageRef = push(ref(database, `conversations/${this.conversationId}/messages`));
+        const messageId = messageRef.key!;
+
+        const message: Message = {
+            id: messageId,
+            sender,
+            content,
+            intent: nlpData?.intent,
+            confidence: nlpData?.confidence,
+            timestamp: Date.now(),
+            metadata: nlpData ? {
+                entities: nlpData.entities,
+                sentiment: nlpData.sentiment
+            } : undefined
+        };
+
+        await set(messageRef, message);
+
+        // Update conversation lastMessageAt
+        await update(ref(database, `conversations/${this.conversationId}`), {
+            lastMessageAt: Date.now(),
+        });
+
+        return messageId;
+    }
 }
 
 /**
@@ -134,9 +247,10 @@ export class ConversationMemory {
 export async function createConversation(
     customerId: string,
     channel: 'whatsapp' | 'sms' | 'web' | 'voice' | 'email',
-    industry: string
+    industry: string,
+    companyId: string  // Add companyId parameter
 ): Promise<string> {
-    const conversationRef = push(ref(database, 'conversations'));
+    const conversationRef = push(ref(database, `companies/${companyId}/conversations`));
     const conversationId = conversationRef.key!;
 
     const conversation: Partial<Conversation> = {

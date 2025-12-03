@@ -6,6 +6,8 @@ import { getKnowledgeBase, findSolution, shouldEscalateIssue } from '../knowledg
 import { intentDetector } from '../ai/intent-detector';
 import { geminiProvider } from '../ai/gemini-provider';
 import { externalSystemService } from '../integrations/external-system-service';
+import { nlpProcessor } from '../ai/nlp-processor';
+import { CustomerMemoryService } from '../ai/customer-memory';
 
 export interface ProcessMessageParams {
     industry: IndustryType;
@@ -34,15 +36,35 @@ export async function processIndustryMessage(
         // 1. Get or create conversation (scoped by company)
         const conversationId = await getOrCreateConversation(companyId, industry, customerPhone, customerName);
 
-        // 2. Save customer message
+        // 2. Process message with NLP
+        const nlpResult = await nlpProcessor.process(messageText, industry);
+        console.log('NLP Analysis:', {
+            intent: nlpResult.intent.primary,
+            confidence: nlpResult.intent.confidence,
+            entities: Object.keys(nlpResult.entities).filter(k => nlpResult.entities[k as keyof typeof nlpResult.entities].length > 0),
+            sentiment: nlpResult.sentiment
+        });
+
+        // 3. Save customer message with NLP data
         await saveMessage(companyId, conversationId, {
             id: messageId,
             role: 'user',
             content: messageText,
             timestamp: Date.now(),
+            nlpData: {
+                intent: nlpResult.intent.primary,
+                confidence: nlpResult.intent.confidence,
+                entities: nlpResult.entities,
+                sentiment: nlpResult.sentiment
+            }
         });
 
-        // 3. Check business hours
+        // 4. Update customer memory
+        const customerMemory = new CustomerMemoryService(companyId);
+        await customerMemory.recordInteraction(customerPhone);
+        await customerMemory.trackQuery(customerPhone, nlpResult.intent.primary);
+
+        // 5. Check business hours
         if (config.businessHours.enabled && !isWithinBusinessHours(config.businessHours)) {
             return {
                 shouldRespond: true,
