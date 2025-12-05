@@ -10,22 +10,26 @@ export class GeminiProvider {
         // Hardcoded API key as requested
         const apiKey = 'AIzaSyB971YbsbiHG4_RMynyEeB76xXoc7bkWfY';
         this.genAI = new GoogleGenerativeAI(apiKey);
+
+        // Gemini 2.0 Flash Experimental (Available on this key)
         this.flashModel = this.genAI.getGenerativeModel({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash-exp',
             generationConfig: {
                 temperature: 0.7,
                 topP: 0.95,
                 topK: 40,
-                maxOutputTokens: 2048,
+                maxOutputTokens: 4096,
             },
         });
+
+        // Gemini 3 Pro Preview - Most intelligent model for complex agentic tasks
         this.proModel = this.genAI.getGenerativeModel({
-            model: 'gemini-1.5-pro',
+            model: 'gemini-3-pro-preview',
             generationConfig: {
                 temperature: 0.8,
                 topP: 0.95,
                 topK: 40,
-                maxOutputTokens: 8192,
+                maxOutputTokens: 16384, // Increased for complex reasoning
             },
         });
     }
@@ -85,14 +89,6 @@ export async function generateResponse(
     conversationHistory: { role: string; parts: { text: string }[] }[] = []
 ): Promise<string> {
     if (typeof prompt === 'string' && conversationHistory.length > 0) {
-        // Convert old style history to new style if needed, or just pass it through if we update the class
-        // For now, let's construct the prompt array expected by the class if we want to use the class method
-        // OR just use the class method's internal logic.
-
-        // Actually, the class method generateResponse supports prompt as string OR array.
-        // If it's a string, it doesn't take history.
-        // So we need to adapt here.
-
         const convertedHistory = conversationHistory.map(msg => ({
             role: msg.role === 'model' ? 'assistant' : 'user',
             content: msg.parts[0].text
@@ -113,12 +109,6 @@ export async function* generateStreamingResponse(
     prompt: string,
     conversationHistory: { role: string; parts: { text: string }[] }[] = []
 ): AsyncGenerator<string, void, unknown> {
-    // Note: Streaming not yet implemented in class, using direct model access for now if needed or implementing in class
-    // For now, let's implement it in the class or just recreate the logic here if the class doesn't have it yet.
-    // The previous class implementation didn't have generateStreamingResponse. Let's add it to the class first or just put the logic here.
-    // Actually, I should add it to the class.
-
-    // But for quick fix, let's just use the provider's model.
     try {
         const chat = geminiFlash.startChat({
             history: conversationHistory,

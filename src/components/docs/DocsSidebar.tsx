@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Book, Code, Settings, MessageSquare, Shield, Zap } from 'lucide-react';
+import { Book, Code, Settings, MessageSquare, Shield, Zap, Sparkles } from 'lucide-react';
 
 export default function DocsSidebar() {
     const pathname = usePathname();
@@ -11,7 +11,7 @@ export default function DocsSidebar() {
         {
             title: 'Getting Started',
             items: [
-                { href: '/docs', label: 'Introduction', icon: Book },
+                { href: '/docs', label: 'Introduction', icon: Sparkles },
                 { href: '/docs/quickstart', label: 'Quick Start Guide', icon: Zap },
                 { href: '/docs/architecture', label: 'Platform Architecture', icon: Code },
             ]
@@ -34,19 +34,21 @@ export default function DocsSidebar() {
     ];
 
     return (
-        <aside className="w-64 bg-white border-r border-gray-200 h-screen sticky top-0 overflow-y-auto hidden md:block">
-            <div className="p-6">
-                <Link href="/" className="flex items-center gap-2 mb-8">
-                    <div className="bg-blue-600 text-white p-1.5 rounded-lg">
-                        <Book className="w-5 h-5" />
-                    </div>
-                    <span className="font-bold text-gray-900 text-lg">AirBrain Docs</span>
-                </Link>
+        <aside className="w-72 h-screen sticky top-0 overflow-y-auto hidden md:block p-4">
+            <div className="glass-card h-full flex flex-col rounded-2xl overflow-hidden border-border/50">
+                <div className="p-6 border-b border-border/50 bg-gradient-to-br from-blue-500/5 to-purple-500/5">
+                    <Link href="/" className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                            <Book className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="font-bold text-lg gradient-text">AirBrain Docs</span>
+                    </Link>
+                </div>
 
-                <nav className="space-y-8">
+                <nav className="flex-1 p-4 space-y-8 overflow-y-auto custom-scrollbar">
                     {sections.map((section) => (
                         <div key={section.title}>
-                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-3">
                                 {section.title}
                             </h3>
                             <div className="space-y-1">
@@ -58,12 +60,12 @@ export default function DocsSidebar() {
                                         <Link
                                             key={item.href}
                                             href={item.href}
-                                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive
-                                                    ? 'bg-blue-50 text-blue-700 font-medium'
-                                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${isActive
+                                                    ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-600 dark:text-blue-400 font-medium border border-blue-500/20'
+                                                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                                                 }`}
                                         >
-                                            <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                                            <Icon className={`w-4 h-4 ${isActive ? 'text-blue-500' : 'text-muted-foreground'}`} />
                                             {item.label}
                                         </Link>
                                     );

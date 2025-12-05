@@ -6,12 +6,15 @@ import { ref, get, set } from 'firebase/database';
 import { database } from '@/lib/firebase/client';
 import { SystemIntegration, AutomationStep } from '@/types/database';
 import { externalSystemService } from '@/lib/integrations/external-system-service';
-import { CheckCircle, XCircle, Loader2, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Plus, Trash2, ChevronDown, ChevronUp, Wand2, Package } from 'lucide-react';
 
 export default function SystemIntegrationSettings() {
     const company = useCompany();
     const [loading, setLoading] = useState(false);
     const [testing, setTesting] = useState(false);
+    const [autoDetecting, setAutoDetecting] = useState(false);
+    const [detectingProducts, setDetectingProducts] = useState(false);
+    const [detectedProducts, setDetectedProducts] = useState<any[]>([]);
     const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
     const [showBrowserConfig, setShowBrowserConfig] = useState(false);
     const [config, setConfig] = useState<SystemIntegration>({
@@ -305,19 +308,89 @@ export default function SystemIntegrationSettings() {
                                 {/* Login URL */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Login URL</label>
-                                    <input
-                                        type="url"
-                                        placeholder="https://portal.yourcompany.com/login"
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                                        value={config.browserAutomation.loginUrl}
-                                        onChange={e => setConfig({
-                                            ...config,
-                                            browserAutomation: {
-                                                ...config.browserAutomation!,
-                                                loginUrl: e.target.value
-                                            }
-                                        })}
-                                    />
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="url"
+                                            placeholder="https://portal.yourcompany.com/login"
+                                            className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                            value={config.browserAutomation.loginUrl}
+                                            onChange={e => setConfig({
+                                                ...config,
+                                                browserAutomation: {
+                                                    ...config.browserAutomation!,
+                                                    loginUrl: e.target.value
+                                                }
+                                            })}
+                                        />
+                                        <button
+                                            onClick={async () => {
+                                                if (!config.browserAutomation?.loginUrl) {
+                                                    setTestResult({ success: false, message: 'Please enter a Login URL first' });
+                                                    return;
+                                                }
+
+                                                setAutoDetecting(true);
+                                                setTestResult(null);
+
+                                                try {
+                                                    const response = await fetch('/api/scanner/auto-detect', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ url: config.browserAutomation.loginUrl })
+                                                    });
+
+                                                    const result = await response.json();
+
+                                                    if (!response.ok) {
+                                                        throw new Error(result.error || 'Auto-detection failed');
+                                                    }
+
+                                                    // Update selectors with detected values
+                                                    setConfig(prev => ({
+                                                        ...prev,
+                                                        browserAutomation: {
+                                                            ...prev.browserAutomation!,
+                                                            selectors: {
+                                                                usernameField: result.selectors.usernameField,
+                                                                passwordField: result.selectors.passwordField,
+                                                                loginButton: result.selectors.loginButton
+                                                            }
+                                                        }
+                                                    }));
+
+                                                    const validationMessage = [
+                                                        result.validation.usernameExists ? '✓ Username' : '✗ Username',
+                                                        result.validation.passwordExists ? '✓ Password' : '✗ Password',
+                                                        result.validation.loginButtonExists ? '✓ Button' : '✗ Button'
+                                                    ].join(', ');
+
+                                                    setTestResult({
+                                                        success: true,
+                                                        message: `Auto-detected! Confidence: ${result.confidence}. Validation: ${validationMessage}`
+                                                    });
+
+                                                } catch (error: any) {
+                                                    setTestResult({ success: false, message: error.message });
+                                                } finally {
+                                                    setAutoDetecting(false);
+                                                }
+                                            }}
+                                            disabled={autoDetecting || !config.browserAutomation?.loginUrl}
+                                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                                        >
+                                            {autoDetecting ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    Detecting...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Wand2 className="w-4 h-4" />
+                                                    Auto Detect
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Selectors */}
@@ -390,12 +463,12 @@ export default function SystemIntegrationSettings() {
                                             min="5"
                                             max="120"
                                             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                                            value={config.browserAutomation.sessionTimeout}
+                                            value={config.browserAutomation?.sessionTimeout || 30}
                                             onChange={e => setConfig({
                                                 ...config,
                                                 browserAutomation: {
                                                     ...config.browserAutomation!,
-                                                    sessionTimeout: parseInt(e.target.value)
+                                                    sessionTimeout: parseInt(e.target.value) || 30
                                                 }
                                             })}
                                         />
@@ -639,6 +712,64 @@ export default function SystemIntegrationSettings() {
                             <>
                                 <CheckCircle className="w-4 h-4" />
                                 Run System Scan
+                            </>
+                        )}
+                    </button>
+
+                    {/* Detect Products Button */}
+                    <button
+                        onClick={async () => {
+                            setDetectingProducts(true);
+                            setTestResult(null);
+                            try {
+                                const response = await fetch('/api/scanner/detect-products', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        url: config.browserAutomation?.loginUrl || config.systemUrl,
+                                        companyId: company.id,
+                                        industry: company.industry,
+                                        username: config.username,
+                                        password: config.password,
+                                        loginSelectors: config.browserAutomation?.selectors,
+                                        saveToDatabase: true
+                                    })
+                                });
+
+                                const result = await response.json();
+                                if (response.ok) {
+                                    setDetectedProducts(result.products || []);
+                                    setTestResult({
+                                        success: true,
+                                        message: `✅ Detected ${result.totalDetected} products/services! Check Data Management to review.`
+                                    });
+                                } else {
+                                    setTestResult({
+                                        success: false,
+                                        message: result.error || 'Product detection failed'
+                                    });
+                                }
+                            } catch (error: any) {
+                                setTestResult({
+                                    success: false,
+                                    message: `Detection error: ${error.message}`
+                                });
+                            } finally {
+                                setDetectingProducts(false);
+                            }
+                        }}
+                        disabled={(!config.browserAutomation?.loginUrl && !config.systemUrl) || detectingProducts}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {detectingProducts ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Detecting Products...
+                            </>
+                        ) : (
+                            <>
+                                <Package className="w-4 h-4" />
+                                Detect Products
                             </>
                         )}
                     </button>

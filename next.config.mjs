@@ -6,10 +6,8 @@ const nextConfig = {
             allowedOrigins: ['localhost:3000'],
         },
     },
-    webpack: (config) => {
-        config.externals = [...(config.externals || []), 'canvas', 'jsdom'];
-        return config;
-    },
+    // Next.js 16 uses Turbopack by default - add empty config to acknowledge
+    turbopack: {},
 };
 
 export default nextConfig;

@@ -38,19 +38,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const isPublicRoute =
             pathname === '/' ||
-            pathname === '/login' ||
-            pathname === '/signup' ||
+            pathname.startsWith('/login') ||
+            pathname.startsWith('/signup') ||
             pathname === '/demo' ||
             pathname.startsWith('/public');
 
         if (!user && !isPublicRoute) {
             router.push('/login');
-        } else if (user && (pathname === '/login' || pathname === '/signup')) {
-            // If logged in and trying to access login/signup, redirect to dashboard
-            // We need to fetch the user's industry to know where to redirect
-            // For now, let's default to a safe place or let the component handle it
-            // Ideally, we shouldn't redirect here if we don't know the industry yet
         }
+        // Don't redirect logged-in users away from login pages - let the login form handle the redirect
     }, [user, loading, pathname, router]);
 
     if (loading) {

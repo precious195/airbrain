@@ -2,6 +2,7 @@ import { TicketService } from '../tickets/ticket-service';
 import { CustomerMemoryService } from '../ai/customer-memory';
 import { nlpProcessor } from '../ai/nlp-processor';
 import { geminiProvider } from '../ai/gemini-provider';
+import { knowledgeAggregator, KnowledgeContext } from '../ai/knowledge-aggregator';
 import { IndustryType } from '@/types/database';
 
 export interface HumanLikeResponse {
@@ -51,8 +52,29 @@ export class ConversationalAI {
             return await this.handleFollowUpRequest(customerId);
         }
 
-        // Generate contextual AI response
-        return await this.generateContextualResponse(customerId, message, nlp, conversationHistory);
+        // Use HumanLikeAgent for advanced system interaction and contextual responses
+        try {
+            const { createHumanLikeAgent } = await import('../agents/human-like-agent');
+            const agent = createHumanLikeAgent(customerId, this.companyId);
+
+            // Reconstruct history for the agent
+            // In a real app, we'd sync this better, but for now we pass the history
+            // The agent manages its own history in memory, but we should initialize it if needed
+
+            const response = await agent.processRequest(message);
+
+            return {
+                message: response.message,
+                shouldDelay: message.length > 10,
+                delayMs: Math.min(message.length * 20, 3000),
+                // If the agent performed an action, we might want to flag it
+                requiresFollowUp: response.action === 'asking' || response.action === 'executing'
+            };
+        } catch (error) {
+            console.error('Agent processing failed, falling back to basic response:', error);
+            // Fallback to basic generation
+            return await this.generateContextualResponse(customerId, message, nlp, conversationHistory);
+        }
     }
 
     /**
@@ -126,7 +148,7 @@ export class ConversationalAI {
     }
 
     /**
-     * Generate contextual AI response
+     * Generate contextual AI response (Fallback)
      */
     private async generateContextualResponse(
         customerId: string,
@@ -134,14 +156,22 @@ export class ConversationalAI {
         nlp: any,
         history: any[]
     ): Promise<HumanLikeResponse> {
-        // Get customer context
+        // Get customer context from memory
         const customerContext = await this.customerMemory.getPersonalizationContext(customerId);
 
-        // Build enhanced prompt
-        const prompt = this.buildHumanLikePrompt(message, nlp, customerContext, history);
+        // Build comprehensive knowledge context
+        const knowledgeContext = await knowledgeAggregator.buildContext(
+            this.industry,
+            this.companyId,
+            message,
+            customerId
+        );
+
+        // Build enhanced prompt with all knowledge
+        const prompt = this.buildEnhancedPrompt(message, nlp, customerContext, history, knowledgeContext);
 
         // Generate response
-        const response = await geminiProvider.generateContent(prompt);
+        const response = await geminiProvider.generateResponse(prompt);
 
         return {
             message: response,
@@ -151,7 +181,51 @@ export class ConversationalAI {
     }
 
     /**
-     * Build prompt for human-like responses
+     * Build enhanced prompt with knowledge context
+     */
+    private buildEnhancedPrompt(
+        message: string,
+        nlp: any,
+        customerContext: string,
+        history: any[],
+        knowledge: KnowledgeContext
+    ): string {
+        // Format knowledge context
+        const knowledgePrompt = knowledgeAggregator.formatContextForPrompt(knowledge, message);
+
+        return `${knowledge.systemPrompt}
+
+**CRITICAL INSTRUCTIONS - Follow these EXACTLY:**
+1. BE HUMAN-LIKE: Use natural, conversational language
+2. SHOW EMPATHY: Acknowledge customer concerns genuinely
+3. BE PROACTIVE: Offer next steps and ask clarifying questions
+4. USE KNOWLEDGE: Reference products, FAQs, and guides from the context below
+5. SIMULATE DELAY AWARENESS: You can say things like "Let me check that for you"
+
+**Customer Memory:**
+${customerContext || 'First-time interaction with this customer.'}
+
+**Detected Intent:** ${nlp.intent.primary} (${Math.round(nlp.intent.confidence * 100)}% confidence)
+**Sentiment:** ${nlp.sentiment}
+**Entities Found:** ${this.formatEntities(nlp.entities)}
+
+**Conversation History:**
+${this.formatHistory(history)}
+
+${knowledgePrompt}
+
+**Your Response Guidelines:**
+- Start with acknowledgment (e.g., "I understand", "Let me help you with that")
+- Use relevant product information from the knowledge context
+- Apply troubleshooting steps when appropriate
+- Reference FAQs when they match the query
+- Keep responses concise but complete (2-4 sentences ideal)
+
+Respond naturally and helpfully:`;
+    }
+
+    /**
+     * Build prompt for human-like responses (legacy method)
      */
     private buildHumanLikePrompt(
         message: string,

@@ -3,7 +3,27 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * Middleware for authentication and rate limiting
+ * Parse the session cookie to get user info
+ */
+function parseSession(sessionCookie: string | undefined): { userId?: string; companyId?: string; industry?: string; role?: string } | null {
+    if (!sessionCookie) return null;
+
+    try {
+        // Handle old format (just 'authenticated')
+        if (sessionCookie === 'authenticated' || sessionCookie === 'true') {
+            return {};
+        }
+
+        // New format: base64 encoded JSON
+        const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
+        return JSON.parse(decoded);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Middleware for authentication and industry-based access control
  */
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -14,17 +34,47 @@ export function middleware(request: NextRequest) {
         pathname.startsWith('/api/webhooks') ||
         pathname === '/' ||
         pathname === '/demo' ||
-        pathname.startsWith('/public')
+        pathname.startsWith('/login') ||
+        pathname.startsWith('/signup') ||
+        pathname.startsWith('/public') ||
+        pathname === '/unauthorized'
     ) {
         return NextResponse.next();
     }
 
-    // Dashboard routes - check authentication
-    if (pathname.startsWith('/portals') || pathname.startsWith('/dashboard')) {
-        const session = request.cookies.get('session');
+    // Get session cookie
+    const sessionCookie = request.cookies.get('session')?.value;
+    const session = parseSession(sessionCookie);
 
+    // Dashboard routes - check authentication
+    if ((pathname.startsWith('/portals') || pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) && pathname !== '/admin/login') {
         if (!session) {
             return NextResponse.redirect(new URL('/login', request.url));
+        }
+
+        // Admin routes - check role
+        if (pathname.startsWith('/admin')) {
+            // Check if user has platform_admin role
+            // Note: We need to ensure the session cookie includes the role
+            // For now, we'll assume the session object has a 'role' property if it's an admin
+            if (session.role !== 'platform_admin') {
+                return NextResponse.redirect(new URL('/unauthorized', request.url));
+            }
+        }
+
+        // Extract industry from URL: /portals/{industry}/...
+        if (pathname.startsWith('/portals')) {
+            const pathParts = pathname.split('/');
+            const urlIndustry = pathParts[2]; // e.g., 'mobile', 'banking', etc.
+
+            // If session has industry info, validate it matches the URL
+            if (session.industry && urlIndustry && session.industry !== urlIndustry) {
+                // User is trying to access a different industry portal
+                const redirectUrl = new URL('/unauthorized', request.url);
+                redirectUrl.searchParams.set('attempted', urlIndustry);
+                redirectUrl.searchParams.set('allowed', session.industry);
+                return NextResponse.redirect(redirectUrl);
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 import { chromium, Browser, Page, ElementHandle } from 'playwright';
+import { otpHandler, OTPDetectionResult } from '@/lib/agents/otp-handler';
 
 export interface DiscoveredFeature {
     id: string;
@@ -28,6 +29,8 @@ export interface ScanConfig {
     url: string;
     username: string;
     password: string;
+    companyId?: string;
+    systemName?: string;
     loginSelectors: {
         usernameField: string;
         passwordField: string;
@@ -179,17 +182,51 @@ export class SystemScanner {
             await this.page.waitForLoadState('networkidle', { timeout: EXTENDED_TIMEOUT });
 
             // Additional wait for any post-login redirects
-            await this.page.waitForTimeout(5000);
+            await this.page.waitForTimeout(3000);
+
+            // Check for OTP page using AI detection
+            console.log('🔍 Checking for OTP requirement...');
+            const otpDetection = await otpHandler.detectOTPPage(this.page);
+
+            if (otpDetection.isOTPPage) {
+                console.log('🔐 OTP page detected! Waiting for user input...');
+
+                // Create OTP request and wait for user to enter it
+                const companyId = config.companyId || 'comp_default';
+                const systemName = config.systemName || new URL(config.url).hostname;
+
+                const otpRequest = await otpHandler.requestOTP(
+                    `scan_${Date.now()}`,
+                    companyId,
+                    config.url,
+                    systemName,
+                    otpDetection
+                );
+
+                // Wait for user to provide OTP (with 5 minute timeout)
+                const otp = await otpHandler.waitForOTP(otpRequest.id);
+
+                if (!otp) {
+                    throw new Error('OTP_TIMEOUT: OTP entry was cancelled or timed out. Please try again.');
+                }
+
+                console.log('✅ OTP received, entering code...');
+
+                // Enter OTP and submit
+                const otpSuccess = await otpHandler.enterOTP(this.page, otp, otpDetection);
+
+                if (!otpSuccess) {
+                    throw new Error('OTP_ENTRY_FAILED: Failed to enter OTP code. Please try again.');
+                }
+
+                // Wait for post-OTP navigation
+                await this.page.waitForLoadState('networkidle', { timeout: 30000 });
+                await this.page.waitForTimeout(3000);
+
+                console.log('✅ OTP verification completed!');
+            }
 
             console.log('✅ Login completed successfully!');
-
-            // Check for OTP if configured
-            if (config.loginSelectors.otpField) {
-                const otpVisible = await this.page.isVisible(config.loginSelectors.otpField);
-                if (otpVisible) {
-                    throw new Error('OTP_REQUIRED: Two-factor authentication detected. Please disable 2FA for the scanning account.');
-                }
-            }
         } catch (error) {
             console.error('❌ Login failed:', error);
 
@@ -201,6 +238,10 @@ export class SystemScanner {
                         `The page may be using different selectors or loading very slowly. ` +
                         `Try inspecting the page elements and updating the selectors in Advanced Login Selectors.`
                     );
+                }
+                // Re-throw OTP-related errors as-is
+                if (error.message.includes('OTP_')) {
+                    throw error;
                 }
             }
             throw error;
@@ -474,7 +515,7 @@ export class SystemScanner {
             if (id) return `#${id}`;
 
             // Try combination of tag + classes
-            const tag = await element.evaluate(el => el.tagName.toLowerCase());
+            const tag = await element.evaluate(el => (el as Element).tagName.toLowerCase());
             const classes = await element.getAttribute('class');
 
             if (classes) {

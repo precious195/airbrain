@@ -56,10 +56,11 @@ export class ConversationMemory {
             id: messageId,
             sender,
             content,
-            intent,
-            confidence,
             timestamp: Date.now(),
         };
+
+        if (intent) message.intent = intent;
+        if (confidence !== undefined) message.confidence = confidence;
 
         await set(messageRef, message);
 
@@ -106,11 +107,16 @@ export class ConversationMemory {
     /**
      * Escalate conversation to human agent
      */
+    /**
+     * Escalate conversation to human agent
+     */
     async escalate(agentId?: string): Promise<void> {
-        await update(ref(database, `conversations/${this.conversationId}`), {
+        const updates: any = {
             status: 'escalated',
-            assignedAgent: agentId,
-        });
+        };
+        if (agentId) updates.assignedAgent = agentId;
+
+        await update(ref(database, `conversations/${this.conversationId}`), updates);
     }
 
     /**
@@ -221,14 +227,19 @@ export class ConversationMemory {
             id: messageId,
             sender,
             content,
-            intent: nlpData?.intent,
-            confidence: nlpData?.confidence,
             timestamp: Date.now(),
-            metadata: nlpData ? {
-                entities: nlpData.entities,
-                sentiment: nlpData.sentiment
-            } : undefined
         };
+
+        if (nlpData?.intent) message.intent = nlpData.intent;
+        if (nlpData?.confidence !== undefined) message.confidence = nlpData.confidence;
+
+        if (nlpData) {
+            message.metadata = {};
+            if (nlpData.entities) message.metadata.entities = nlpData.entities;
+            if (nlpData.sentiment) message.metadata.sentiment = nlpData.sentiment;
+            // If metadata ends up empty, delete it
+            if (Object.keys(message.metadata).length === 0) delete message.metadata;
+        }
 
         await set(messageRef, message);
 

@@ -4,7 +4,7 @@
  * TypeScript interfaces for Firebase Realtime Database schema
  */
 
-export type UserRole = 'admin' | 'agent' | 'viewer';
+export type UserRole = 'platform_admin' | 'company_admin' | 'admin' | 'agent' | 'viewer';
 
 export interface User {
     id: string;
@@ -309,6 +309,7 @@ export interface Company {
     id: string;
     name: string;
     industry: IndustryType;
+    status?: 'active' | 'suspended';
     whatsappConfig?: WhatsAppIndustryConfig;
     systemIntegration?: SystemIntegration;
     createdAt: number;
@@ -331,3 +332,50 @@ export interface WhatsAppIndustryConfig {
     welcomeMessage: string;
     offlineMessage: string;
 }
+
+// Detected Product/Service from external systems
+export type ProductType = 'product' | 'service' | 'package' | 'plan' | 'bundle';
+
+export type ProductStatus = 'pending_review' | 'approved' | 'rejected' | 'imported';
+
+export interface DetectedProduct {
+    id: string;
+    name: string;
+    type: ProductType;
+    category: string;
+    price?: number;
+    currency?: string;
+    duration?: string;
+    features: string[];
+    description?: string;
+    sourceUrl: string;
+    sourceSelector?: string;
+    confidence: number;
+    rawText?: string;
+    industry: IndustryType;
+    detectedAt: number;
+    status: ProductStatus;
+    imported: boolean;
+    importedAt?: number;
+    importedBy?: string;
+}
+
+// Imported product for use in the system
+export interface SystemProduct {
+    id: string;
+    name: string;
+    type: ProductType;
+    category: string;
+    price: number;
+    currency: string;
+    duration?: string;
+    features: string[];
+    description: string;
+    industry: IndustryType;
+    companyId: string;
+    active: boolean;
+    createdAt: number;
+    updatedAt: number;
+    sourceProductId?: string; // Reference to DetectedProduct.id
+}
+

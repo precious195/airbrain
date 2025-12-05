@@ -34,8 +34,11 @@ export default function LoginForm() {
             // We should probably fetch the company to get the industry.
             // For this prototype, let's just redirect to 'mobile' or fetch the company.
 
-            // Set session cookie via API
-            const idToken = await user.getIdToken();
+            // Set session cookie via API - use Firebase's currentUser for getting the token
+            const { auth } = await import('@/lib/firebase/client');
+            const firebaseUser = auth.currentUser;
+            if (!firebaseUser) throw new Error('No Firebase session');
+            const idToken = await firebaseUser.getIdToken();
             await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

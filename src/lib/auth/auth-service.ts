@@ -41,7 +41,7 @@ export const authService = {
             id: user.uid,
             email: email,
             phone: '', // Optional for admin
-            role: 'admin',
+            role: 'company_admin',
             companyId: companyId,
             status: 'active',
             createdAt: Date.now(),

@@ -1,4 +1,4 @@
-import { ref, get, update } from 'firebase/database';
+import { ref, get, update as firebaseUpdate } from 'firebase/database';
 import { database } from '../firebase/client';
 
 export interface Ticket {
@@ -124,7 +124,7 @@ export class TicketService {
         };
 
         const ticketRef = ref(database, `companies/${this.companyId}/tickets/${ticketId}`);
-        await update(ticketRef, ticket);
+        await firebaseUpdate(ticketRef, ticket);
 
         return ticket;
     }
@@ -186,7 +186,7 @@ export class TicketService {
         ticket.updatedAt = Date.now();
 
         const ticketRef = ref(database, `companies/${this.companyId}/tickets/${ticketId}`);
-        await update(ticketRef, { updates: ticket.updates, updatedAt: ticket.updatedAt });
+        await firebaseUpdate(ticketRef, { updates: ticket.updates, updatedAt: ticket.updatedAt });
     }
 
     /**
@@ -207,7 +207,7 @@ export class TicketService {
         ticket.updatedAt = Date.now();
 
         const ticketRef = ref(database, `companies/${this.companyId}/tickets/${ticketId}`);
-        await update(ticketRef, {
+        await firebaseUpdate(ticketRef, {
             internalNotes: ticket.internalNotes,
             updatedAt: ticket.updatedAt
         });
@@ -245,7 +245,7 @@ export class TicketService {
         }
 
         const ticketRef = ref(database, `companies/${this.companyId}/tickets/${ticketId}`);
-        await update(ticketRef, updates);
+        await firebaseUpdate(ticketRef, updates);
     }
 
     /**

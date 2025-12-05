@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
 
         // Detect intent
         const intent = await detectIntent(message, industry as IndustryType);
+        console.log('DEBUG: Detected Intent:', JSON.stringify(intent, null, 2));
 
         // Check escalation
         if (shouldEscalate(intent, message)) {

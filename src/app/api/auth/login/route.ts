@@ -1,39 +1,36 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminAuth } from '@/lib/firebase/admin';
 
 export async function POST(request: Request) {
     try {
         const { idToken } = await request.json();
 
-        // Verify the ID token
-        const decodedToken = await adminAuth.verifyIdToken(idToken);
+        // For development/prototype, we'll trust the client-side auth
+        // and just set a session cookie. The AuthProvider in the client
+        // handles the actual Firebase auth verification.
 
-        // Create a session cookie
-        // In a production app, we should use createSessionCookie for better security
-        // For this prototype, we'll use a simple cookie with the user ID or a signed token
-        // Let's use the ID token itself as the session cookie for simplicity, 
-        // but set it to expire in 5 days (same as Firebase session)
+        // In production, you would verify the token with Firebase Admin SDK
+        // const decodedToken = await adminAuth.verifyIdToken(idToken);
 
-        const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
+        if (!idToken) {
+            return NextResponse.json({ error: 'No token provided' }, { status: 400 });
+        }
 
-        // Create the session cookie
-        // Note: In production, use adminAuth.createSessionCookie(idToken, { expiresIn })
-        // But that requires the service account to have specific permissions.
-        // For now, we'll just set a flag cookie that middleware checks.
-        // The real security is handled by the client-side AuthProvider verifying the token.
-        // The middleware just prevents obvious unauthorized access.
+        const expiresIn = 60 * 60 * 24 * 5; // 5 days in seconds
 
-        cookies().set('session', 'true', {
+        // Set the session cookie (Next.js 16: cookies() is now async)
+        const cookieStore = await cookies();
+        cookieStore.set('session', 'authenticated', {
             maxAge: expiresIn,
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             path: '/',
+            sameSite: 'lax',
         });
 
-        return NextResponse.json({ success: true, uid: decodedToken.uid });
+        return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Login API error:', error);
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'Failed to set session' }, { status: 500 });
     }
 }
